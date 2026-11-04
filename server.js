@@ -105,6 +105,13 @@ function initDatabase() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
 
+    // 6. Real-time Multi-Device Sync Table
+    db.run(`CREATE TABLE IF NOT EXISTS app_state (
+      id TEXT PRIMARY KEY,
+      data TEXT NOT NULL,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+
     seedInitialData();
   });
 }
@@ -191,6 +198,40 @@ function requireRole(roles) {
 // -------------------------------------------------------------
 // 4. API Endpoints
 // -------------------------------------------------------------
+
+
+// -------------------------------------------------------------
+// Real-time Central Sync Endpoints (Multi-device Smartphone Sync)
+// -------------------------------------------------------------
+app.get('/api/sync', (req, res) => {
+  db.get(`SELECT data FROM app_state WHERE id = 'main'`, (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!row || !row.data) {
+      return res.json(null);
+    }
+    try {
+      res.json(JSON.parse(row.data));
+    } catch (e) {
+      res.json(null);
+    }
+  });
+});
+
+app.post('/api/sync', (req, res) => {
+  const data = req.body;
+  if (!data) return res.status(400).json({ error: '데이터가 없습니다.' });
+  
+  const dataStr = JSON.stringify(data);
+  db.run(
+    `INSERT INTO app_state (id, data, updated_at) VALUES ('main', ?, CURRENT_TIMESTAMP)
+     ON CONFLICT(id) DO UPDATE SET data = excluded.data, updated_at = CURRENT_TIMESTAMP`,
+    [dataStr],
+    function(err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ success: true, updated_at: new Date().toISOString() });
+    }
+  );
+});
 
 // POST /api/auth/login
 app.post('/api/auth/login', (req, res) => {

@@ -111,6 +111,9 @@
 
       <!-- Quick Role Switcher & User Profile Dropdown Button -->
       <div class="flex items-center space-x-1.5">
+        <button id="manualSyncBtn" title="서버 실시간 동기화" class="p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 transition flex items-center justify-center">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        </button>
         <button id="userSwitchBtn" class="flex items-center space-x-1.5 bg-slate-100 hover:bg-slate-200 px-2.5 py-1.5 rounded-full text-xs font-semibold text-slate-700 transition">
           <span id="headerUserDot" class="w-2 h-2 rounded-full bg-emerald-500"></span>
           <span id="headerUserName">로그인 필요</span>
@@ -1097,19 +1100,79 @@
       }
 
       function saveDatabase() {
+        var data = {
+          users: state.users,
+          leaves: state.leaves,
+          holidays: state.holidays,
+          auditLogs: state.auditLogs,
+          manualAdjustments: state.manualAdjustments,
+          savedAt: new Date().toISOString()
+        };
         try {
-          var data = {
-            users: state.users,
-            leaves: state.leaves,
-            holidays: state.holidays,
-            auditLogs: state.auditLogs,
-            manualAdjustments: state.manualAdjustments,
-            savedAt: new Date().toISOString()
-          };
           localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
         } catch (e) {
           console.error('LocalStorage save failed', e);
         }
+
+        // Real-time server sync across all employee smartphones
+        if (typeof window !== 'undefined' && window.location && window.location.protocol.indexOf('http') === 0) {
+          fetch('/api/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+          }).catch(function(err) {
+            console.warn('Server sync error (will retry):', err);
+          });
+        }
+      }
+
+
+      function syncFromServer(callback) {
+        if (typeof window === 'undefined' || !window.location || window.location.protocol.indexOf('http') !== 0) {
+          if (callback) callback();
+          return;
+        }
+
+        fetch('/api/sync')
+          .then(function(res) {
+            if (!res.ok) throw new Error('Network response not ok');
+            return res.json();
+          })
+          .then(function(serverData) {
+            if (serverData && serverData.users) {
+              var hasChanges = JSON.stringify(serverData.users) !== JSON.stringify(state.users) ||
+                               JSON.stringify(serverData.leaves) !== JSON.stringify(state.leaves);
+
+              state.users = serverData.users || [];
+              state.leaves = serverData.leaves || [];
+              state.holidays = serverData.holidays || state.holidays;
+              state.auditLogs = serverData.auditLogs || [];
+              state.manualAdjustments = serverData.manualAdjustments || [];
+
+              try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(serverData));
+              } catch (e) {}
+
+              // Refresh current user session
+              if (state.currentUser) {
+                var found = state.users.find(function(u) { return u.id === state.currentUser.id; });
+                if (found) state.currentUser = found;
+              }
+
+              // If views changed, re-render
+              if (hasChanges) {
+                if (state.currentView === 'viewHome') renderHome();
+                if (state.currentView === 'viewCalendar') renderCalendar();
+                if (state.currentView === 'viewHistory') renderHistory();
+                if (state.currentView === 'viewAdmin') renderAdmin();
+              }
+            }
+            if (callback) callback();
+          })
+          .catch(function(err) {
+            console.warn('Sync from server error:', err);
+            if (callback) callback();
+          });
       }
 
       function resetToDefaultDatabase() {
@@ -2253,6 +2316,16 @@
         if (goToHistory) {
           goToHistory.addEventListener('click', function() {
             switchView('viewHistory');
+          });
+        }
+
+        var manualSync = document.getElementById('manualSyncBtn');
+        if (manualSync) {
+          manualSync.addEventListener('click', function() {
+            syncFromServer(function() {
+              showToast('서버 데이터와 실시간 동기화되었습니다.', 'success');
+              if (state.currentView === 'viewHome') renderHome();
+            });
           });
         }
 
@@ -3554,12 +3627,26 @@
       function init() {
         loadDatabase();
         setupEventListeners();
-        var hasAdmin = state.users.some(function(u) { return u.role === 'admin' && u.status === 'ACTIVE'; });
-        if (!hasAdmin) {
-          switchView('viewAuth');
-          showInitAdminCard();
-        } else {
-          switchView('viewHome');
+
+        // 1. Initial server synchronization
+        syncFromServer(function() {
+          var hasAdmin = state.users.some(function(u) { return u.role === 'admin' && u.status === 'ACTIVE'; });
+          if (!hasAdmin && !state.currentUser) {
+            switchView('viewAuth');
+            showInitAdminCard();
+          } else if (!state.currentUser) {
+            switchView('viewAuth');
+            showLoginCard();
+          } else {
+            switchView('viewHome');
+          }
+        });
+
+        // 2. Real-time background sync every 3.5 seconds across all employee phones
+        if (typeof window !== 'undefined' && window.location && window.location.protocol.indexOf('http') === 0) {
+          setInterval(function() {
+            syncFromServer();
+          }, 3500);
         }
       }
 
