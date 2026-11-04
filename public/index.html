@@ -1091,10 +1091,15 @@
           resetToDefaultDatabase();
         }
 
-        // If there is an active admin, select them, else null
-        var activeAdmin = state.users.find(function(u) { return u.role === 'admin' && u.status === 'ACTIVE'; });
-        if (activeAdmin) {
-          state.currentUser = activeAdmin;
+        // Restore user session specifically for THIS device from localStorage
+        var savedUserId = null;
+        try {
+          savedUserId = localStorage.getItem('ANNUAL_LEAVE_SESSION_USER_ID');
+        } catch (e) {}
+
+        if (savedUserId) {
+          var loggedInUser = state.users.find(function(u) { return u.id === savedUserId && u.status === 'ACTIVE'; });
+          state.currentUser = loggedInUser || null;
         } else {
           state.currentUser = null;
         }
@@ -1154,10 +1159,17 @@
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(serverData));
               } catch (e) {}
 
-              // Refresh current user session
-              if (state.currentUser) {
-                var found = state.users.find(function(u) { return u.id === state.currentUser.id; });
-                if (found) state.currentUser = found;
+              // Refresh current user session for THIS device only
+              var savedUserId = null;
+              try {
+                savedUserId = localStorage.getItem('ANNUAL_LEAVE_SESSION_USER_ID');
+              } catch (e) {}
+
+              if (savedUserId) {
+                var loggedIn = state.users.find(function(u) { return u.id === savedUserId && u.status === 'ACTIVE'; });
+                state.currentUser = loggedIn || null;
+              } else {
+                state.currentUser = null;
               }
 
               // If views changed, re-render
@@ -2383,6 +2395,11 @@
         if (navToLoginBtn) {
           navToLoginBtn.addEventListener('click', function() {
             quickUserModal.classList.add('hidden');
+            state.currentUser = null;
+            try {
+              localStorage.removeItem('ANNUAL_LEAVE_SESSION_USER_ID');
+            } catch (e) {}
+            showToast('로그아웃되었습니다.', 'success');
             switchView('viewAuth');
             showLoginCard();
           });
@@ -2867,8 +2884,11 @@
         var u = state.users.find(function(user) { return user.id === userId; });
         if (u) {
           state.currentUser = u;
+          try {
+            localStorage.setItem('ANNUAL_LEAVE_SESSION_USER_ID', u.id);
+          } catch (e) {}
           document.getElementById('quickUserModal').classList.add('hidden');
-          showToast(u.name + ' ' + u.position + ' 계정으로 전환되었습니다.', 'success');
+          showToast(u.name + ' 계정으로 전환되었습니다.', 'success');
           renderHome();
         }
       };
@@ -3486,7 +3506,10 @@
         var u = state.users.find(function(user) { return user.id === userId; });
         if (u) {
           state.currentUser = u;
-          showToast(u.name + ' ' + u.position + ' 계정으로 로그인되었습니다.', 'success');
+          try {
+            localStorage.setItem('ANNUAL_LEAVE_SESSION_USER_ID', u.id);
+          } catch (e) {}
+          showToast(u.name + ' 계정으로 로그인되었습니다.', 'success');
           switchView('viewHome');
         }
       };
@@ -3566,6 +3589,9 @@
 
         state.users.unshift(newAdmin);
         state.currentUser = newAdmin;
+        try {
+          localStorage.setItem('ANNUAL_LEAVE_SESSION_USER_ID', newAdmin.id);
+        } catch (e) {}
         saveDatabase();
 
         addAuditLog('최초 관리자 직접 등록', name + ' (' + username + ') 관리자 계정 생성 완료');
@@ -3600,7 +3626,10 @@
 
         err.classList.add('hidden');
         state.currentUser = user;
-        showToast(user.name + ' ' + user.position + '님, 환영합니다!', 'success');
+        try {
+          localStorage.setItem('ANNUAL_LEAVE_SESSION_USER_ID', user.id);
+        } catch (e) {}
+        showToast(user.name + '님, 환영합니다!', 'success');
         switchView('viewHome');
       }
 
@@ -3666,10 +3695,11 @@
         // 1. Initial server synchronization
         syncFromServer(function() {
           var hasAdmin = state.users.some(function(u) { return u.role === 'admin' && u.status === 'ACTIVE'; });
-          if (!hasAdmin && !state.currentUser) {
+          if (!hasAdmin) {
             switchView('viewAuth');
             showInitAdminCard();
           } else if (!state.currentUser) {
+            // New device / not logged in on this phone -> MUST show Login Screen!
             switchView('viewAuth');
             showLoginCard();
           } else {
