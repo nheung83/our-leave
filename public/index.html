@@ -329,54 +329,7 @@
           </div>
         </div>
 
-        <!-- Verification Checklist Banner (Prompt requirement testing helper) -->
-        <div class="bg-slate-100 rounded-2xl p-3 border border-slate-200">
-          <button id="toggleTestGuideBtn" class="w-full flex items-center justify-between text-left">
-            <div class="flex items-center space-x-2">
-              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-              <span class="text-xs font-bold text-slate-700">9가지 필수 검증 항목 실시간 현황</span>
-            </div>
-            <svg id="testGuideArrow" class="w-4 h-4 text-slate-400 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
-          </button>
-          <div id="testGuideContent" class="hidden mt-3 pt-3 border-t border-slate-200 space-y-1.5 text-[11px] text-slate-600">
-            <div class="flex items-center justify-between">
-              <span>1. 고수현 2026년 발생량 16일 (128h)</span>
-              <span class="font-bold text-emerald-600">✓ 검증완료</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span>2. 김남흥 2026년 발생량 17일 (136h)</span>
-              <span class="font-bold text-emerald-600">✓ 검증완료</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span>3. 2시간 연차 신청 시 0.25일 (2h) 차감</span>
-              <span class="font-bold text-emerald-600">✓ 시스템 반영</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span>4. 3일 연속 연차 신청 시 24시간 차감</span>
-              <span class="font-bold text-emerald-600">✓ 주말/휴무일 제외 계산</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span>5. 차장 1차 승인 후 대표에게 최종 요청</span>
-              <span class="font-bold text-emerald-600">✓ 2단계 결재</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span>6. 대표 최종 승인 후 공유 달력 자동 반영</span>
-              <span class="font-bold text-emerald-600">✓ 달력 실시간 연동</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span>7. 차장 본인 연차는 대표에게 직행</span>
-              <span class="font-bold text-emerald-600">✓ 1차 승인 스킵</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span>8. 일반 직원은 타인 잔액 수정 불가</span>
-              <span class="font-bold text-emerald-600">✓ 권한 제어</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span>9. 연도별 사용 내역 및 변경 이력 보존</span>
-              <span class="font-bold text-emerald-600">✓ 영구 보존 및 감사로그</span>
-            </div>
-          </div>
-        </div>
+        
 
       </section>
 
@@ -2563,22 +2516,7 @@
           });
         }
 
-        // Test Guide Toggle
-        var toggleTestBtn = document.getElementById('toggleTestGuideBtn');
-        var testContent = document.getElementById('testGuideContent');
-        var testArrow = document.getElementById('testGuideArrow');
-        if (toggleTestBtn && testContent) {
-          toggleTestBtn.addEventListener('click', function() {
-            var isHidden = testContent.classList.contains('hidden');
-            if (isHidden) {
-              testContent.classList.remove('hidden');
-              testArrow.classList.add('rotate-180');
-            } else {
-              testContent.classList.add('hidden');
-              testArrow.classList.remove('rotate-180');
-            }
-          });
-        }
+
 
         // Calendar Month Navigation
         var prevMonthBtn = document.getElementById('calPrevMonthBtn');
