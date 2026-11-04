@@ -973,6 +973,7 @@
         <div id="modalInputArea" class="hidden mb-4">
           <label for="modalInput" id="modalInputLabel" class="block text-xs font-bold text-slate-700 mb-1">사유 입력</label>
           <textarea id="modalInput" rows="2" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-brand-600"></textarea>
+          <input type="date" id="modalDateInput" class="hidden w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-bold text-slate-800 focus:outline-none focus:border-brand-600">
         </div>
 
         <div class="flex items-center space-x-2">
@@ -1378,6 +1379,26 @@
       // -------------------------------------------------------------
       // 5. DATE FORMATTING HELPERS
       // -------------------------------------------------------------
+
+      function parseFlexibleDate(str) {
+        if (!str) return null;
+        str = str.trim().replace(/\s+/g, '');
+        // 1. YYYY-MM-DD or YYYY.MM.DD or YYYY/MM/DD or YYYY년MM월DD일
+        var m1 = str.match(/^(\d{4})[-/.년](\d{1,2})[-/.월]?(\d{1,2})[일]?$/);
+        if (m1) {
+          var y = m1[1];
+          var m = ('0' + m1[2]).slice(-2);
+          var d = ('0' + m1[3]).slice(-2);
+          return y + '-' + m + '-' + d;
+        }
+        // 2. YYYYMMDD (8 digits)
+        var m2 = str.match(/^(\d{4})(\d{2})(\d{2})$/);
+        if (m2) {
+          return m2[1] + '-' + m2[2] + '-' + m2[3];
+        }
+        return null;
+      }
+
       function formatDateYMD(date) {
         var y = date.getFullYear();
         var m = ('0' + (date.getMonth() + 1)).slice(-2);
@@ -2248,14 +2269,15 @@
       }
 
       var modalCallback = null;
+      var currentModalInputType = 'text';
 
       function showActionModal(options) {
-        // options: { title, desc, needInput, inputLabel, inputPlaceholder, confirmText, cancelText, onConfirm }
         var modal = document.getElementById('actionModal');
         var title = document.getElementById('modalTitle');
         var desc = document.getElementById('modalDesc');
         var inputArea = document.getElementById('modalInputArea');
         var input = document.getElementById('modalInput');
+        var dateInput = document.getElementById('modalDateInput');
         var inputLabel = document.getElementById('modalInputLabel');
         var confirmBtn = document.getElementById('modalConfirmBtn');
         var cancelBtn = document.getElementById('modalCancelBtn');
@@ -2264,12 +2286,22 @@
         desc.textContent = options.desc || '';
         confirmBtn.textContent = options.confirmText || '확인';
         cancelBtn.textContent = options.cancelText || '취소';
+        currentModalInputType = options.inputType || 'text';
 
         if (options.needInput) {
           inputArea.classList.remove('hidden');
-          inputLabel.textContent = options.inputLabel || '사유';
-          input.placeholder = options.inputPlaceholder || '사유를 입력해 주세요.';
-          input.value = '';
+          inputLabel.textContent = options.inputLabel || '입력';
+
+          if (currentModalInputType === 'date') {
+            dateInput.classList.remove('hidden');
+            input.classList.add('hidden');
+            dateInput.value = options.defaultValue || '2023-07-01';
+          } else {
+            input.classList.remove('hidden');
+            dateInput.classList.add('hidden');
+            input.placeholder = options.inputPlaceholder || '내용을 입력해 주세요.';
+            input.value = options.defaultValue || '';
+          }
         } else {
           inputArea.classList.add('hidden');
         }
@@ -2369,7 +2401,9 @@
         var modalCancelBtn = document.getElementById('modalCancelBtn');
         if (modalConfirmBtn) {
           modalConfirmBtn.addEventListener('click', function() {
-            var inputVal = document.getElementById('modalInput').value;
+            var inputVal = (currentModalInputType === 'date') ?
+              document.getElementById('modalDateInput').value :
+              document.getElementById('modalInput').value;
             if (modalCallback) {
               modalCallback(inputVal);
             }
@@ -3160,34 +3194,35 @@
         });
       }
 
-      // ADMIN EDIT USER HIRE DATE / DETAILS
+      // ADMIN EDIT USER HIRE DATE / DETAILS (Mobile Datepicker + Flexible Parser)
       function handleEditUserHireDate(userId) {
         var user = state.users.find(function(u) { return u.id === userId; });
         if (!user) return;
 
         showActionModal({
-          title: user.name + ' 정보 및 입사일 수정',
-          desc: '입사일을 변경하면 2026년 기준 연차 발생량이 자동 재계산됩니다. (현재 입사일: ' + user.hireDate + ')',
+          title: user.name + ' 입사일 설정',
+          desc: '입사일을 지정하면 2026년 기준 연차 발생량이 자동 산출됩니다. (현재 입사일: ' + (user.hireDate || '미설정') + ')',
           needInput: true,
-          inputLabel: '새 입사일 (YYYY-MM-DD)',
-          inputPlaceholder: user.hireDate,
-          confirmText: '변경 저장',
+          inputType: 'date',
+          defaultValue: user.hireDate || '2023-07-01',
+          inputLabel: '입사일 선택',
+          confirmText: '입사일 적용',
           onConfirm: function(val) {
-            val = val.trim();
-            if (!/^\d{4}-\d{2}-\d{2}$/.test(val)) {
-              showToast('날짜 형식이 올바르지 않습니다. (예: 2023-07-01)', 'error');
+            var parsed = parseFlexibleDate(val);
+            if (!parsed) {
+              showToast('올바른 날짜를 선택 또는 입력해 주세요. (예: 2023-07-01)', 'error');
               return;
             }
             var prevHire = user.hireDate;
-            user.hireDate = val;
+            user.hireDate = parsed;
             saveDatabase();
 
-            var newBal = calculateBaseAnnualLeave(val, CURRENT_YEAR);
+            var newBal = calculateBaseAnnualLeave(parsed, CURRENT_YEAR);
             addAuditLog(
-              '직원 정보 수정',
-              user.name + ' 입사일 변경: ' + prevHire + ' -> ' + val + ' (2026년 자동 발생량: ' + newBal.days + '일 재계산됨)'
+              '직원 입사일 변경',
+              user.name + ' 입사일 변경: ' + prevHire + ' -> ' + parsed + ' (2026년 연차 ' + newBal.days + '일 자동 적용)'
             );
-            showToast(user.name + ' 직원의 입사일이 변경되었습니다. 발생량이 재계산되었습니다.', 'success');
+            showToast(user.name + ' 입사일이 ' + parsed + '로 저장되었습니다. (2026년 연차: ' + newBal.days + '일)', 'success');
             renderAdminStaffTab();
             renderHome();
           }
