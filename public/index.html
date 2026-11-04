@@ -113,7 +113,7 @@
       <div class="flex items-center space-x-1.5">
         <button id="userSwitchBtn" class="flex items-center space-x-1.5 bg-slate-100 hover:bg-slate-200 px-2.5 py-1.5 rounded-full text-xs font-semibold text-slate-700 transition">
           <span id="headerUserDot" class="w-2 h-2 rounded-full bg-emerald-500"></span>
-          <span id="headerUserName">김남흥 차장</span>
+          <span id="headerUserName">로그인 필요</span>
           <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
           </svg>
@@ -169,7 +169,7 @@
                 <span id="currentYearBadge" class="text-xs font-medium text-brand-100">2026년 기준</span>
               </div>
               <h2 class="text-xl font-bold mt-1 tracking-tight">
-                <span id="homeUserName">김남흥</span>님 <span id="homeUserPosition" class="hidden"></span>
+                <span id="homeUserName">관리자</span>님 <span id="homeUserPosition" class="hidden"></span>
               </h2>
               <p id="homeHireDateText" class="text-xs text-brand-100 mt-0.5">입사일: 2021.08.16 (근속 6년차)</p>
             </div>
@@ -204,7 +204,7 @@
           </div>
         </div>
 
-        <!-- Pending Approvals Widget for Manager (김남흥 차장 1차 결재 & 가입 승인) -->
+        <!-- Pending Approvals Widget for Manager (시스템 관리자 1차 결재 & 가입 승인) -->
         <div id="adminApprovalSection" class="hidden space-y-3">
           <!-- 1차 결재 대기 알림 카드 -->
           <div class="bg-white rounded-2xl p-4 border border-blue-100 shadow-xs">
@@ -768,14 +768,14 @@
             <h2 class="text-lg font-bold text-slate-800">최초 관리자 계정 직접 가입</h2>
             <p class="text-xs text-slate-500 mt-1 leading-relaxed">
               현재 관리자 계정이 탈퇴(미등록) 상태입니다.<br>
-              직접 사용할 <strong>관리자(김남흥 차장)</strong>의 아이디와 비밀번호를 설정해 주세요.
+              직접 사용할 <strong>시스템 관리자</strong>의 아이디와 비밀번호를 설정해 주세요.
             </p>
           </div>
 
           <form id="authInitAdminForm" class="space-y-3">
             <div>
               <label for="initAdminName" class="block text-xs font-bold text-slate-700 mb-1">성명 (실명)</label>
-              <input type="text" id="initAdminName" value="김남흥" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-brand-600" required>
+              <input type="text" id="initAdminName" value="" placeholder="성명 입력 (예: 홍길동)" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-brand-600" required>
             </div>
 
             <div>
@@ -789,7 +789,7 @@
                 <label for="initAdminUsername" class="text-xs font-bold text-slate-700">사용할 관리자 아이디</label>
                 <span class="text-[10px] text-brand-600 font-bold bg-brand-50 px-1.5 py-0.5 rounded">한글 이름 사용 가능</span>
               </div>
-              <input type="text" id="initAdminUsername" value="김남흥" placeholder="한글 이름 또는 아이디 입력 (예: 김남흥)" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-brand-600" required>
+              <input type="text" id="initAdminUsername" value="" placeholder="성명 입력 (예: 홍길동)" placeholder="한글 이름 또는 아이디 입력 (예: 김남흥)" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-brand-600" required>
               <p class="text-[10px] text-slate-500 mt-0.5">※ 아이디를 본인 한글 성명('김남흥')과 동일하게 바로 사용하실 수 있습니다.</p>
             </div>
 
@@ -876,7 +876,7 @@
           <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
             <div>
               <h2 class="text-base font-bold text-slate-800">신규 직원 회원가입</h2>
-              <p class="text-[11px] text-slate-500">가입 후 관리자(김남흥 차장) 승인 후 활성화됩니다.</p>
+              <p class="text-[11px] text-slate-500">가입 후 시스템 관리자 승인 후 활성화됩니다.</p>
             </div>
             <button id="backToLoginBtn" class="text-xs text-slate-400 hover:text-slate-600">닫기</button>
           </div>
@@ -1003,7 +1003,7 @@
       // -------------------------------------------------------------
       var CURRENT_YEAR = 2026;
       var WORK_HOURS_PER_DAY = 8; // 08:30~17:30 (Lunch 12:30~13:30, net 8h)
-      var STORAGE_KEY = 'ANNUAL_LEAVE_SYSTEM_V4_CLEAN_ALL';
+      var STORAGE_KEY = 'ANNUAL_LEAVE_SYSTEM_V5_PURE_EMPTY';
 
       // 4 Pre-defined time slots
       var TIME_SLOTS = {
@@ -1404,7 +1404,7 @@
           headerNameEl.textContent = user.name + (user.position ? (' ' + user.position) : '');
         }
 
-        // Show Admin Nav tab ONLY to Admin (김남흥 차장)
+        // Show Admin Nav tab ONLY to Admin (시스템 관리자)
         if (adminNavBtn) {
           if (user.role === 'admin') {
             adminNavBtn.classList.remove('hidden');
@@ -2673,7 +2673,7 @@
           pwResetBtn.addEventListener('click', function() {
             showActionModal({
               title: '비밀번호 재설정 문의',
-              desc: '사내 보안 규정에 따라 비밀번호 분실 시 관리자(김남흥 차장)에게 초기화 요청이 전달됩니다. 아이디를 입력해 주세요.',
+              desc: '사내 보안 규정에 따라 비밀번호 분실 시 시스템 관리자에게 초기화 요청이 전달됩니다. 아이디를 입력해 주세요.',
               needInput: true,
               inputLabel: '사내 아이디',
               inputPlaceholder: '아이디를 입력하세요',
@@ -2717,7 +2717,7 @@
           html += '<div class="p-3 bg-amber-50 border border-amber-300 rounded-xl mb-2 flex items-center justify-between">' +
             '<div>' +
               '<span class="text-xs font-bold text-amber-900 block">관리자 계정 미등록</span>' +
-              '<span class="text-[11px] text-amber-700">관리자(김남흥 차장)로 직접 가입하세요.</span>' +
+              '<span class="text-[11px] text-amber-700">시스템 관리자로 직접 가입하세요.</span>' +
             '</div>' +
             '<button type="button" class="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg" onclick="window.goToAdminSignup()">' +
               '가입하기' +
@@ -2829,7 +2829,7 @@
         }
 
         // Determine Initial Approval Status based on user role
-        // Case 1: General staff -> WAITING_FIRST (김남흥 차장 1차 결재 대기)
+        // Case 1: General staff -> WAITING_FIRST (시스템 관리자 1차 결재 대기)
         // Case 2: Kim Namheung (차장) -> WAITING_FINAL (스킵하고 대표 최종 결재 대기)
         // Case 3: CEO -> APPROVED (대표 본인 일정 직접 등록)
         var initialStatus = 'WAITING_FIRST';
@@ -3478,7 +3478,7 @@
         }
 
         if (user.status === 'PENDING_APPROVAL') {
-          err.textContent = '현재 관리자(김남흥 차장) 승인 대기 중인 계정입니다. 승인 후 로그인할 수 있습니다.';
+          err.textContent = '현재 시스템 관리자 승인 대기 중인 계정입니다. 승인 후 로그인할 수 있습니다.';
           err.classList.remove('hidden');
           return;
         }
@@ -3540,7 +3540,7 @@
 
         showActionModal({
           title: '가입 신청 완료',
-          desc: name + '님의 회원가입 신청이 접수되었습니다. 관리자(김남흥 차장)가 신원을 확인한 후 계정을 승인 및 활성화합니다.',
+          desc: name + '님의 회원가입 신청이 접수되었습니다. 시스템 관리자가 신원을 확인한 후 계정을 승인 및 활성화합니다.',
           confirmText: '확인',
           onConfirm: function() {
             showLoginCard();
