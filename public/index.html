@@ -1,0 +1,3576 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>우리 회사 연차관리 - 모바일 사내 시스템</title>
+  
+  <!-- PWA & Mobile Web App Meta Tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="연차관리">
+  <meta name="theme-color" content="#1E40AF">
+  <meta name="format-detection" content="telephone=no">
+  
+  <!-- Tailwind CSS 3.4.17 -->
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  
+  <!-- Web App Manifest as Data URI -->
+  <link rel="manifest" href="data:application/manifest+json;utf-8,%7B%22name%22%3A%22%EC%9A%B0%EB%A6%AC%20%ED%92%8C%EC%82%AC%20%EC%97%B0%EC%B0%A8%EA%B4%80%EB%A6%AC%22%2C%22short_name%22%3A%22%EC%97%B0%EC%B0%A8%EA%B4%80%EB%A6%AC%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23F8FAFC%22%2C%22theme_color%22%3A%22%231E40AF%22%7D">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#EFF6FF',
+              100: '#DBEAFE',
+              200: '#BFDBFE',
+              500: '#3B82F6',
+              600: '#2563EB',
+              700: '#1D4ED8',
+              800: '#1E40AF',
+              900: '#1E3A8A'
+            }
+          },
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', '"Apple SD Gothic Neo"', '"Pretendard"', '"Malgun Gothic"', 'sans-serif']
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    /* Mobile-first base styles & smooth scrolling */
+    html, body {
+      height: 100%;
+      background-color: #F1F5F9;
+      color: #1E293B;
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", Pretendard, "Malgun Gothic", sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    
+    input, textarea, select {
+      user-select: auto;
+    }
+    
+    /* Hide scrollbars but allow scrolling */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* Safe bottom padding for iPhone home indicator */
+    .pb-safe {
+      padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 64px);
+    }
+    .bottom-nav {
+      padding-bottom: env(safe-area-inset-bottom, 8px);
+    }
+
+    /* Active slot button styling */
+    .slot-btn.selected {
+      background-color: #2563EB;
+      color: #FFFFFF;
+      border-color: #1D4ED8;
+      box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3);
+    }
+
+    /* Badge pulse */
+    @keyframes subtlePulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+    .pulse-badge {
+      animation: subtlePulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+  </style>
+</head>
+<body class="flex justify-center items-start min-h-screen">
+
+  <!-- Mobile Frame Container (Max-w-md 430px centered for desktop, 100% on mobile) -->
+  <div id="appContainer" class="w-full max-w-[430px] min-h-screen bg-slate-50 flex flex-col relative shadow-2xl overflow-x-hidden border-x border-slate-200">
+    
+    <!-- Top Header Bar -->
+    <header class="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200 px-4 py-3 flex items-center justify-between shadow-xs">
+      <div class="flex items-center space-x-2">
+        <div class="w-8 h-8 rounded-lg bg-brand-800 text-white flex items-center justify-center font-bold text-sm shadow-sm">
+          연차
+        </div>
+        <div>
+          <h1 class="text-base font-bold text-slate-800 leading-tight">우리 회사 연차관리</h1>
+          <p id="headerSubText" class="text-[11px] text-slate-500 font-medium">정규근무 08:30~17:30 (8h)</p>
+        </div>
+      </div>
+
+      <!-- Quick Role Switcher & User Profile Dropdown Button -->
+      <div class="flex items-center space-x-1.5">
+        <button id="userSwitchBtn" class="flex items-center space-x-1.5 bg-slate-100 hover:bg-slate-200 px-2.5 py-1.5 rounded-full text-xs font-semibold text-slate-700 transition">
+          <span id="headerUserDot" class="w-2 h-2 rounded-full bg-emerald-500"></span>
+          <span id="headerUserName">김남흥 차장</span>
+          <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Global Quick Role Swapper Modal / Bar for Easy Testing -->
+    <div id="quickUserModal" class="hidden fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 transition-opacity">
+      <div class="w-full max-w-[430px] bg-white rounded-t-2xl sm:rounded-2xl p-5 shadow-2xl animate-in slide-in-from-bottom duration-200">
+        <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
+          <div>
+            <h3 class="text-base font-bold text-slate-800">계정 전환 / 테스트 모드</h3>
+            <p class="text-xs text-slate-500">직원 4명의 권한을 즉시 전환하여 테스트합니다.</p>
+          </div>
+          <button id="closeUserModalBtn" class="p-1 rounded-full text-slate-400 hover:text-slate-600 bg-slate-100">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        <div class="space-y-2 mb-4" id="userSwitchList">
+          <!-- User items populated dynamically -->
+        </div>
+
+        <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
+          <button id="navToLoginBtn" class="text-xs font-medium text-brand-600 hover:text-brand-800 underline">
+            로그아웃 및 로그인 화면으로 이동
+          </button>
+          <button id="navToSignupBtn" class="text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-100 px-3 py-1.5 rounded-lg">
+            새 직원 가입 테스트
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 pb-safe px-4 pt-3 overflow-y-auto no-scrollbar">
+
+      <!-- ========================================== -->
+      <!-- VIEW 1: HOME (권한별 메인 대시보드) -->
+      <!-- ========================================== -->
+      <section id="viewHome" class="space-y-4">
+
+        <!-- Welcome Banner Card -->
+        <div class="bg-gradient-to-br from-brand-800 to-brand-600 rounded-2xl p-4 text-white shadow-md relative overflow-hidden">
+          <div class="absolute -right-4 -bottom-4 w-28 h-28 bg-white/10 rounded-full blur-xl pointer-events-none"></div>
+          <div class="flex justify-between items-start">
+            <div>
+              <div class="flex items-center space-x-2">
+                <span id="homeRoleBadge" class="px-2 py-0.5 text-[11px] font-bold rounded-full bg-white/20 text-white backdrop-blur">
+                  시스템 관리자 · 1차 결재자
+                </span>
+                <span id="currentYearBadge" class="text-xs font-medium text-brand-100">2026년 기준</span>
+              </div>
+              <h2 class="text-xl font-bold mt-1 tracking-tight">
+                <span id="homeUserName">김남흥</span>님 <span id="homeUserPosition" class="hidden"></span>
+              </h2>
+              <p id="homeHireDateText" class="text-xs text-brand-100 mt-0.5">입사일: 2021.08.16 (근속 6년차)</p>
+            </div>
+            <button id="quickApplyBtnFromHome" class="bg-white text-brand-700 hover:bg-brand-50 active:scale-95 transition text-xs font-bold px-3.5 py-2 rounded-xl shadow-sm flex items-center space-x-1">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+              <span>연차 신청</span>
+            </button>
+          </div>
+
+          <!-- Leave Stat Summary Grid (일반 직원 및 공통) -->
+          <div id="homeLeaveStatsGrid" class="mt-4 pt-3 border-t border-white/15 grid grid-cols-4 gap-2 text-center">
+            <div class="bg-white/10 rounded-xl p-2 backdrop-blur-xs">
+              <span class="block text-[11px] text-brand-100 font-medium">올해 발생</span>
+              <span id="statAccruedDays" class="block text-base font-extrabold text-white">17일</span>
+              <span id="statAccruedHours" class="block text-[10px] text-brand-200">136시간</span>
+            </div>
+            <div class="bg-white/10 rounded-xl p-2 backdrop-blur-xs">
+              <span class="block text-[11px] text-brand-100 font-medium">사용 연차</span>
+              <span id="statUsedDays" class="block text-base font-extrabold text-white">0일</span>
+              <span id="statUsedHours" class="block text-[10px] text-brand-200">0시간</span>
+            </div>
+            <div class="bg-white/10 rounded-xl p-2 backdrop-blur-xs">
+              <span class="block text-[11px] text-amber-200 font-medium">승인 대기</span>
+              <span id="statPendingDays" class="block text-base font-extrabold text-amber-300">0일</span>
+              <span id="statPendingHours" class="block text-[10px] text-amber-200">0시간</span>
+            </div>
+            <div class="bg-white/20 rounded-xl p-2 backdrop-blur-xs border border-white/20">
+              <span class="block text-[11px] text-emerald-200 font-semibold">남은 연차</span>
+              <span id="statRemainingDays" class="block text-base font-black text-emerald-300">17일</span>
+              <span id="statRemainingHours" class="block text-[10px] text-emerald-200 font-bold">136시간</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pending Approvals Widget for Manager (김남흥 차장 1차 결재 & 가입 승인) -->
+        <div id="adminApprovalSection" class="hidden space-y-3">
+          <!-- 1차 결재 대기 알림 카드 -->
+          <div class="bg-white rounded-2xl p-4 border border-blue-100 shadow-xs">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-blue-600 pulse-badge"></span>
+                <h3 class="text-sm font-bold text-slate-800">1차 결재 대기</h3>
+                <span id="badge1stPendingCount" class="text-xs font-bold px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">0건</span>
+              </div>
+              <span class="text-[11px] text-slate-400">직원 신청 → 차장 1차 승인</span>
+            </div>
+            <div id="list1stPendingApprovals" class="space-y-2">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- 신규 회원가입 승인 대기 카드 -->
+          <div class="bg-white rounded-2xl p-4 border border-amber-100 shadow-xs">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                <h3 class="text-sm font-bold text-slate-800">신규 회원가입 승인 대기</h3>
+                <span id="badgeSignupPendingCount" class="text-xs font-bold px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full">0명</span>
+              </div>
+            </div>
+            <div id="listSignupPendingUsers" class="space-y-2">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Pending Approvals Widget for CEO (대표님 최종 결재) -->
+        <div id="ceoApprovalSection" class="hidden space-y-3">
+          <div class="bg-white rounded-2xl p-4 border border-purple-100 shadow-xs">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-purple-600 pulse-badge"></span>
+                <h3 class="text-sm font-bold text-slate-800">최종 결재 대기</h3>
+                <span id="badgeCeoPendingCount" class="text-xs font-bold px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full">0건</span>
+              </div>
+              <span class="text-[11px] text-slate-400">대표 최종 승인 시 연차 확정</span>
+            </div>
+            <div id="listCeoPendingApprovals" class="space-y-2">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Team Leave Status Overview (관리자 / 대표님용 전체 현황 요약) -->
+        <div id="teamOverviewCard" class="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs">
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="text-sm font-bold text-slate-800 flex items-center space-x-1.5">
+              <span>전체 직원 연차 현황</span>
+              <span class="text-[11px] font-normal text-slate-500">(2026년 기준)</span>
+            </h3>
+            <span class="text-xs text-brand-600 font-semibold" id="teamMemberCount">4명 등록</span>
+          </div>
+          <div class="space-y-2" id="teamLeaveStatusList">
+            <!-- Dynamic staff cards -->
+          </div>
+        </div>
+
+        <!-- This Month's Vacation Schedule (이번 달 전사 휴가 일정) -->
+        <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs">
+          <div class="flex justify-between items-center mb-3">
+            <div class="flex items-center space-x-2">
+              <div class="w-6 h-6 rounded-lg bg-brand-50 text-brand-700 flex items-center justify-center">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+              </div>
+              <h3 class="text-sm font-bold text-slate-800" id="thisMonthScheduleTitle">이번 달 승인된 휴가 일정</h3>
+            </div>
+            <button id="goToCalendarFromHomeBtn" class="text-xs text-brand-600 font-semibold hover:underline">
+              달력 전체보기 &rarr;
+            </button>
+          </div>
+          <div id="homeThisMonthList" class="space-y-2">
+            <!-- Dynamically populated approved leave schedules -->
+          </div>
+        </div>
+
+        <!-- My Recent Applications (내 신청 내역 - 직원용) -->
+        <div id="homeMyRecentSection" class="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs">
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="text-sm font-bold text-slate-800">내 최근 신청 내역</h3>
+            <button id="goToHistoryFromHomeBtn" class="text-xs text-brand-600 font-semibold hover:underline">
+              전체 내역 &rarr;
+            </button>
+          </div>
+          <div id="homeMyRecentList" class="space-y-2">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- Verification Checklist Banner (Prompt requirement testing helper) -->
+        <div class="bg-slate-100 rounded-2xl p-3 border border-slate-200">
+          <button id="toggleTestGuideBtn" class="w-full flex items-center justify-between text-left">
+            <div class="flex items-center space-x-2">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span class="text-xs font-bold text-slate-700">9가지 필수 검증 항목 실시간 현황</span>
+            </div>
+            <svg id="testGuideArrow" class="w-4 h-4 text-slate-400 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+          </button>
+          <div id="testGuideContent" class="hidden mt-3 pt-3 border-t border-slate-200 space-y-1.5 text-[11px] text-slate-600">
+            <div class="flex items-center justify-between">
+              <span>1. 고수현 2026년 발생량 16일 (128h)</span>
+              <span class="font-bold text-emerald-600">✓ 검증완료</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span>2. 김남흥 2026년 발생량 17일 (136h)</span>
+              <span class="font-bold text-emerald-600">✓ 검증완료</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span>3. 2시간 연차 신청 시 0.25일 (2h) 차감</span>
+              <span class="font-bold text-emerald-600">✓ 시스템 반영</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span>4. 3일 연속 연차 신청 시 24시간 차감</span>
+              <span class="font-bold text-emerald-600">✓ 주말/휴무일 제외 계산</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span>5. 차장 1차 승인 후 대표에게 최종 요청</span>
+              <span class="font-bold text-emerald-600">✓ 2단계 결재</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span>6. 대표 최종 승인 후 공유 달력 자동 반영</span>
+              <span class="font-bold text-emerald-600">✓ 달력 실시간 연동</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span>7. 차장 본인 연차는 대표에게 직행</span>
+              <span class="font-bold text-emerald-600">✓ 1차 승인 스킵</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span>8. 일반 직원은 타인 잔액 수정 불가</span>
+              <span class="font-bold text-emerald-600">✓ 권한 제어</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span>9. 연도별 사용 내역 및 변경 이력 보존</span>
+              <span class="font-bold text-emerald-600">✓ 영구 보존 및 감사로그</span>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ========================================== -->
+      <!-- VIEW 2: SHARED CALENDAR (전체 직원 공유 달력) -->
+      <!-- ========================================== -->
+      <section id="viewCalendar" class="hidden space-y-4">
+        <!-- Calendar Header -->
+        <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="text-base font-bold text-slate-800">전사 공유 휴가 달력</h2>
+              <p class="text-[11px] text-slate-500">최종 승인된 휴가 일정만 전 직원에게 공유됩니다.</p>
+            </div>
+            <div class="flex items-center space-x-1">
+              <button id="calPrevMonthBtn" class="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+              </button>
+              <span id="calCurrentMonthText" class="text-sm font-bold text-slate-800 px-2 min-w-[90px] text-center">2026년 11월</span>
+              <button id="calNextMonthBtn" class="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+              </button>
+              <button id="calTodayBtn" class="text-[11px] font-semibold text-brand-600 bg-brand-50 px-2 py-1 rounded-md ml-1">
+                오늘
+              </button>
+            </div>
+          </div>
+
+          <!-- Calendar Grid Days of Week -->
+          <div class="grid grid-cols-7 gap-1 text-center text-xs font-semibold mb-2">
+            <span class="text-rose-500">일</span>
+            <span class="text-slate-600">월</span>
+            <span class="text-slate-600">화</span>
+            <span class="text-slate-600">수</span>
+            <span class="text-slate-600">목</span>
+            <span class="text-slate-600">금</span>
+            <span class="text-blue-500">토</span>
+          </div>
+
+          <!-- Calendar Days Grid -->
+          <div id="calendarGrid" class="grid grid-cols-7 gap-1 text-center">
+            <!-- Dynamic days -->
+          </div>
+
+          <!-- Calendar Legend -->
+          <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
+            <div class="flex items-center space-x-3">
+              <span class="flex items-center space-x-1">
+                <span class="w-2 h-2 rounded-full bg-blue-600"></span>
+                <span>승인 연차</span>
+              </span>
+              <span class="flex items-center space-x-1">
+                <span class="w-2 h-2 rounded-full bg-rose-400"></span>
+                <span>공휴일/회사휴무</span>
+              </span>
+            </div>
+            <span class="text-[10px] text-slate-400">날짜를 터치하면 상세 휴가자를 확인합니다</span>
+          </div>
+        </div>
+
+        <!-- Selected Date Details Card -->
+        <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs">
+          <div class="flex justify-between items-center mb-3 pb-2 border-b border-slate-100">
+            <h3 class="text-sm font-bold text-slate-800 flex items-center space-x-2">
+              <span id="selectedDateBadge" class="bg-brand-50 text-brand-700 px-2 py-0.5 rounded-lg text-xs">2026-11-04</span>
+              <span>휴가자 명단</span>
+            </h3>
+            <span id="selectedDateCount" class="text-xs font-semibold text-slate-500">0명</span>
+          </div>
+
+          <div id="selectedDateLeaveList" class="space-y-2">
+            <!-- Dynamic items -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- VIEW 3: LEAVE APPLICATION (연차 신청 화면) -->
+      <!-- ========================================== -->
+      <section id="viewApply" class="hidden space-y-4">
+        <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs">
+          <div class="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
+            <div>
+              <h2 class="text-base font-bold text-slate-800">연차 신청서</h2>
+              <p class="text-[11px] text-slate-500">최소 2시간 단위 또는 종일·연속 연차를 신청합니다.</p>
+            </div>
+            <div class="text-right">
+              <span class="block text-[10px] text-slate-400">현재 남은 연차</span>
+              <span id="applyCurrentBalance" class="text-xs font-bold text-brand-700">16일 (128h)</span>
+            </div>
+          </div>
+
+          <form id="leaveApplyForm" class="space-y-4">
+            
+            <!-- Type Selector: 2시간 단위 vs 종일/연속 연차 -->
+            <div>
+              <label class="block text-xs font-bold text-slate-700 mb-1.5">신청 유형 선택</label>
+              <div class="grid grid-cols-2 gap-2">
+                <button type="button" id="typeSlotBtn" class="py-2.5 px-3 rounded-xl border-2 text-xs font-bold text-center transition flex items-center justify-center space-x-1.5 border-brand-600 bg-brand-50 text-brand-700">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  <span>2시간 단위 (구간 선택)</span>
+                </button>
+                <button type="button" id="typeFullBtn" class="py-2.5 px-3 rounded-xl border-2 text-xs font-bold text-center transition flex items-center justify-center space-x-1.5 border-slate-200 bg-white text-slate-600 hover:bg-slate-50">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                  <span>종일 / 연속 연차 (1~N일)</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Date Input Section (Slot mode: single date) -->
+            <div id="singleDateGroup">
+              <label for="applySingleDate" class="block text-xs font-bold text-slate-700 mb-1">사용 날짜 선택</label>
+              <input type="date" id="applySingleDate" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600">
+            </div>
+
+            <!-- Date Range Input Section (Full/consecutive mode) -->
+            <div id="rangeDateGroup" class="hidden space-y-2">
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label for="applyStartDate" class="block text-xs font-bold text-slate-700 mb-1">시작일</label>
+                  <input type="date" id="applyStartDate" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:border-brand-600">
+                </div>
+                <div>
+                  <label for="applyEndDate" class="block text-xs font-bold text-slate-700 mb-1">종료일</label>
+                  <input type="date" id="applyEndDate" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-800 focus:outline-none focus:border-brand-600">
+                </div>
+              </div>
+              <p class="text-[11px] text-slate-500">※ 토·일요일, 법정 공휴일 및 회사 휴무일은 자동으로 제외되어 실제 근무일만 차감됩니다.</p>
+            </div>
+
+            <!-- 2-Hour Time Slots Selection (Only for Slot Mode) -->
+            <div id="timeSlotsGroup">
+              <div class="flex justify-between items-center mb-1.5">
+                <label class="text-xs font-bold text-slate-700">사용 시간 구간 (중복 선택 가능)</label>
+                <span class="text-[11px] text-brand-600 font-semibold" id="slotSelectedCount">0개 선택됨 (0시간)</span>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <button type="button" data-slot="1" data-time="08:30~10:30" class="slot-btn border border-slate-200 bg-slate-50 hover:bg-slate-100 rounded-xl p-3 text-left transition flex flex-col justify-between">
+                  <div class="flex items-center justify-between w-full">
+                    <span class="text-xs font-bold">1구간</span>
+                    <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 slot-badge">0.25일</span>
+                  </div>
+                  <span class="text-xs font-medium mt-1">08:30 ~ 10:30</span>
+                  <span class="text-[10px] text-slate-400 mt-0.5">오전 2시간</span>
+                </button>
+
+                <button type="button" data-slot="2" data-time="10:30~12:30" class="slot-btn border border-slate-200 bg-slate-50 hover:bg-slate-100 rounded-xl p-3 text-left transition flex flex-col justify-between">
+                  <div class="flex items-center justify-between w-full">
+                    <span class="text-xs font-bold">2구간</span>
+                    <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 slot-badge">0.25일</span>
+                  </div>
+                  <span class="text-xs font-medium mt-1">10:30 ~ 12:30</span>
+                  <span class="text-[10px] text-slate-400 mt-0.5">오전 2시간</span>
+                </button>
+
+                <button type="button" data-slot="3" data-time="13:30~15:30" class="slot-btn border border-slate-200 bg-slate-50 hover:bg-slate-100 rounded-xl p-3 text-left transition flex flex-col justify-between">
+                  <div class="flex items-center justify-between w-full">
+                    <span class="text-xs font-bold">3구간</span>
+                    <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 slot-badge">0.25일</span>
+                  </div>
+                  <span class="text-xs font-medium mt-1">13:30 ~ 15:30</span>
+                  <span class="text-[10px] text-slate-400 mt-0.5">오후 2시간</span>
+                </button>
+
+                <button type="button" data-slot="4" data-time="15:30~17:30" class="slot-btn border border-slate-200 bg-slate-50 hover:bg-slate-100 rounded-xl p-3 text-left transition flex flex-col justify-between">
+                  <div class="flex items-center justify-between w-full">
+                    <span class="text-xs font-bold">4구간</span>
+                    <span class="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 slot-badge">0.25일</span>
+                  </div>
+                  <span class="text-xs font-medium mt-1">15:30 ~ 17:30</span>
+                  <span class="text-[10px] text-slate-400 mt-0.5">오후 2시간</span>
+                </button>
+              </div>
+              <div class="mt-2 text-[11px] text-slate-500 flex justify-between px-1">
+                <span>점심시간(12:30~13:30) 자동 제외</span>
+                <button type="button" id="selectAllSlotsBtn" class="text-brand-600 font-semibold hover:underline">하루 전체 선택 (8h/1일)</button>
+              </div>
+            </div>
+
+            <!-- Overlap / Coworker Conflict Warning Banner -->
+            <div id="coworkerConflictWarning" class="hidden p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs">
+              <div class="flex items-start space-x-2">
+                <svg class="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                <div class="flex-1">
+                  <p class="font-bold" id="conflictWarningTitle">동일 날짜 동료 휴가 중복 알림</p>
+                  <p class="mt-0.5 text-[11px]" id="conflictWarningText">해당 날짜에 이미 휴가자가 있습니다.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Self Overlap Error Banner -->
+            <div id="selfOverlapError" class="hidden p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs">
+              <p class="font-bold">신청 불가: 일정 중복</p>
+              <p class="mt-0.5 text-[11px]" id="selfOverlapText">선택하신 일시에 이미 신청 또는 승인된 본인의 휴가 일정이 있습니다.</p>
+            </div>
+
+            <!-- Real-time Calculation Summary Card -->
+            <div class="bg-slate-50 rounded-xl p-3.5 border border-slate-200 space-y-2">
+              <div class="flex justify-between items-center text-xs">
+                <span class="text-slate-600">신청 연차 합계</span>
+                <span id="calcTotalRequest" class="font-bold text-slate-800 text-sm">0일 (0시간)</span>
+              </div>
+              <div class="flex justify-between items-center text-xs">
+                <span class="text-slate-600">신청 후 예상 잔여 연차</span>
+                <span id="calcExpectedBalance" class="font-extrabold text-brand-700 text-sm">16일 (128시간)</span>
+              </div>
+              <div class="pt-2 border-t border-slate-200 text-[11px] text-slate-500 flex items-center justify-between">
+                <span>결재 절차</span>
+                <span id="calcApprovalFlowNotice" class="font-semibold text-slate-700">차장 1차 승인 → 대표 최종 승인</span>
+              </div>
+            </div>
+
+            <!-- Work Handover Memo (Optional) -->
+            <div>
+              <label for="applyMemo" class="block text-xs font-bold text-slate-700 mb-1">업무 인수인계 및 사유 (선택)</label>
+              <textarea id="applyMemo" rows="2" placeholder="긴급 연락처 또는 업무 인수인계 사항을 입력할 수 있습니다." class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-brand-600"></textarea>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" id="submitLeaveBtn" class="w-full bg-brand-600 hover:bg-brand-700 active:scale-98 text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition flex items-center justify-center space-x-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span>연차 신청 제출하기</span>
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- VIEW 4: HISTORY (신청 및 사용 내역) -->
+      <!-- ========================================== -->
+      <section id="viewHistory" class="hidden space-y-4">
+        <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h2 class="text-base font-bold text-slate-800">연차 신청 · 사용 내역</h2>
+              <p class="text-[11px] text-slate-500" id="historySubText">본인의 전체 연차 신청 상태와 처리 이력입니다.</p>
+            </div>
+            
+            <!-- History Filter (All, Pending, Approved, Rejected) -->
+            <select id="historyFilterSelect" class="bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-700 focus:outline-none">
+              <option value="ALL">전체 보기</option>
+              <option value="PENDING">결재 대기</option>
+              <option value="APPROVED">최종 승인</option>
+              <option value="REJECTED">반려됨</option>
+              <option value="CANCELLED">취소됨</option>
+            </select>
+          </div>
+
+          <!-- History Item Cards List -->
+          <div id="historyListContainer" class="space-y-3">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================== -->
+      <!-- VIEW 5: ADMIN MANAGEMENT (관리자 전용 화면) -->
+      <!-- ========================================== -->
+      <section id="viewAdmin" class="hidden space-y-4">
+        
+        <!-- Admin Sub-navigation Tabs -->
+        <div class="flex space-x-1.5 overflow-x-auto no-scrollbar pb-1">
+          <button type="button" data-tab="adminStaff" class="admin-tab-btn flex-shrink-0 px-3 py-2 rounded-xl text-xs font-bold bg-brand-600 text-white shadow-xs">
+            직원 관리
+          </button>
+          <button type="button" data-tab="adminLeaveAdjust" class="admin-tab-btn flex-shrink-0 px-3 py-2 rounded-xl text-xs font-bold bg-white text-slate-600 border border-slate-200">
+            연차 수동 조정
+          </button>
+          <button type="button" data-tab="adminHolidays" class="admin-tab-btn flex-shrink-0 px-3 py-2 rounded-xl text-xs font-bold bg-white text-slate-600 border border-slate-200">
+            휴무일 설정
+          </button>
+          <button type="button" data-tab="adminHistory" class="admin-tab-btn flex-shrink-0 px-3 py-2 rounded-xl text-xs font-bold bg-white text-slate-600 border border-slate-200">
+            변경 감사 이력
+          </button>
+          <button type="button" data-tab="adminData" class="admin-tab-btn flex-shrink-0 px-3 py-2 rounded-xl text-xs font-bold bg-white text-slate-600 border border-slate-200">
+            데이터 백업/엑셀
+          </button>
+        </div>
+
+        <!-- TAB 1: 직원 관리 (회원가입 승인, 입사일 수정, 권한 변경) -->
+        <div id="tabContent_adminStaff" class="space-y-4">
+          <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs">
+            <div class="flex justify-between items-center mb-3">
+              <h3 class="text-sm font-bold text-slate-800">등록 직원 목록 및 정보 관리</h3>
+              <span class="text-xs text-brand-600 font-semibold" id="adminTotalUserCount">4명</span>
+            </div>
+            <p class="text-xs text-slate-500 mb-3">직원의 입사일을 수정하면 해당 연도의 회사 기준 발생 연차가 즉시 자동 재계산됩니다.</p>
+            
+            <div id="adminStaffList" class="space-y-3">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 2: 연차 수동 조정 (사유 및 전후 기록 필수) -->
+        <div id="tabContent_adminLeaveAdjust" class="hidden space-y-4">
+          <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs">
+            <h3 class="text-sm font-bold text-slate-800 mb-1">연차 발생량 수동 추가 · 차감</h3>
+            <p class="text-xs text-slate-500 mb-3">포상 휴가, 개근 연차 추가, 법정 조정 등 수동 수정 시 사유와 이력이 자동 기록됩니다.</p>
+
+            <form id="adminAdjustForm" class="space-y-3">
+              <div>
+                <label for="adjustTargetUser" class="block text-xs font-bold text-slate-700 mb-1">대상 직원</label>
+                <select id="adjustTargetUser" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 focus:outline-none">
+                  <!-- Populated dynamically -->
+                </select>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label for="adjustType" class="block text-xs font-bold text-slate-700 mb-1">조정 유형</label>
+                  <select id="adjustType" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 focus:outline-none">
+                    <option value="ADD">추가 부여 (+)</option>
+                    <option value="DEDUCT">차감 조정 (-)</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="adjustAmount" class="block text-xs font-bold text-slate-700 mb-1">시간 (hours)</label>
+                  <select id="adjustAmount" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 focus:outline-none">
+                    <option value="2">2시간 (0.25일)</option>
+                    <option value="4">4시간 (0.50일)</option>
+                    <option value="6">6시간 (0.75일)</option>
+                    <option value="8" selected>8시간 (1일)</option>
+                    <option value="16">16시간 (2일)</option>
+                    <option value="24">24시간 (3일)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label for="adjustReason" class="block text-xs font-bold text-slate-700 mb-1">조정 사유 (필수 입력)</label>
+                <input type="text" id="adjustReason" placeholder="예: 프로젝트 완수 특별 포상 휴가 1일 부여" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-brand-600" required>
+              </div>
+
+              <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 active:scale-98 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition shadow-sm">
+                연차 수동 조정 반영 및 이력 기록
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- TAB 3: 공휴일 및 회사 휴무일 관리 -->
+        <div id="tabContent_adminHolidays" class="hidden space-y-4">
+          <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs">
+            <h3 class="text-sm font-bold text-slate-800 mb-1">회사 휴무일 및 법정 공휴일 관리</h3>
+            <p class="text-xs text-slate-500 mb-3">연속 연차 신청 시 아래 등록된 휴무일은 근무 일수 계산에서 자동 제외됩니다.</p>
+
+            <!-- Add New Holiday Form -->
+            <form id="addHolidayForm" class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2 mb-4">
+              <span class="text-xs font-bold text-slate-700 block">새 휴무일 추가</span>
+              <div class="grid grid-cols-2 gap-2">
+                <input type="date" id="newHolidayDate" class="bg-white border border-slate-300 rounded-lg px-2 py-1.5 text-xs text-slate-800" required>
+                <input type="text" id="newHolidayName" placeholder="휴무일 명칭 (예: 창립기념일)" class="bg-white border border-slate-300 rounded-lg px-2 py-1.5 text-xs text-slate-800" required>
+              </div>
+              <button type="submit" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-semibold py-1.5 rounded-lg text-xs transition">
+                휴무일 등록
+              </button>
+            </form>
+
+            <div class="space-y-1.5 max-h-72 overflow-y-auto no-scrollbar" id="adminHolidayList">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 4: 변경 감사 이력 (Audit History) -->
+        <div id="tabContent_adminHistory" class="hidden space-y-4">
+          <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs">
+            <div class="flex justify-between items-center mb-3">
+              <h3 class="text-sm font-bold text-slate-800">연차 수정 및 시스템 변경 감사 로그</h3>
+              <span class="text-xs text-slate-400">자동 영구 보존</span>
+            </div>
+            <div id="adminAuditLogList" class="space-y-2 text-xs">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB 5: 데이터 백업 및 엑셀 다운로드 -->
+        <div id="tabContent_adminData" class="hidden space-y-4">
+          <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs space-y-4">
+            <div>
+              <h3 class="text-sm font-bold text-slate-800 mb-1">연도별 연차 자료 CSV 다운로드</h3>
+              <p class="text-xs text-slate-500 mb-3">한국어 엑셀 호환 UTF-8 BOM 인코딩으로 전체 직원의 연차 발생량, 사용량, 잔액을 다운로드합니다.</p>
+              <button id="downloadCsvBtn" class="w-full bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition shadow-sm flex items-center justify-center space-x-1.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                <span>2026년 연차 현황 엑셀/CSV 다운로드</span>
+              </button>
+            </div>
+
+            <div class="pt-3 border-t border-slate-100">
+              <h3 class="text-sm font-bold text-slate-800 mb-1">시스템 데이터 백업 및 복구</h3>
+              <p class="text-xs text-slate-500 mb-3">전체 데이터(사용자, 결재 내역, 휴무일, 감사로그)를 JSON 파일로 내보내거나 복원합니다.</p>
+              <div class="grid grid-cols-2 gap-2">
+                <button id="backupJsonBtn" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 px-3 rounded-xl text-xs transition">
+                  전체 백업 (JSON)
+                </button>
+                <button id="resetDemoDataBtn" class="bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold py-2 px-3 rounded-xl text-xs transition">
+                  초기 테스트값 리셋
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ========================================== -->
+      <!-- VIEW 6: AUTH LOGIN / SIGNUP (회원가입/로그인) -->
+      <!-- ========================================== -->
+      <section id="viewAuth" class="hidden space-y-4 py-4">
+        
+        <!-- Initial Admin Registration Card (Shown when admin account is deleted/not yet created) -->
+        <div id="initAdminCard" class="bg-white rounded-2xl p-5 border-2 border-brand-500 shadow-xl">
+          <div class="text-center mb-5">
+            <div class="w-12 h-12 rounded-2xl bg-brand-800 text-white flex items-center justify-center mx-auto mb-2 text-xl font-black shadow-md">
+              관리
+            </div>
+            <span class="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 mb-1">최초 마스터 등록</span>
+            <h2 class="text-lg font-bold text-slate-800">최초 관리자 계정 직접 가입</h2>
+            <p class="text-xs text-slate-500 mt-1 leading-relaxed">
+              현재 관리자 계정이 탈퇴(미등록) 상태입니다.<br>
+              직접 사용할 <strong>관리자(김남흥 차장)</strong>의 아이디와 비밀번호를 설정해 주세요.
+            </p>
+          </div>
+
+          <form id="authInitAdminForm" class="space-y-3">
+            <div>
+              <label for="initAdminName" class="block text-xs font-bold text-slate-700 mb-1">성명 (실명)</label>
+              <input type="text" id="initAdminName" value="김남흥" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-brand-600" required>
+            </div>
+
+            <div>
+              <label for="initAdminHireDate" class="block text-xs font-bold text-slate-700 mb-1">입사일 (연차 자동 계산 기준)</label>
+              <input type="date" id="initAdminHireDate" value="2021-08-16" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-brand-600" required>
+              <p class="text-[10px] text-slate-400 mt-0.5">※ 2021.08 입사 시 2026년 기준 17일(136h) 발생 자동 산출</p>
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label for="initAdminUsername" class="text-xs font-bold text-slate-700">사용할 관리자 아이디</label>
+                <span class="text-[10px] text-brand-600 font-bold bg-brand-50 px-1.5 py-0.5 rounded">한글 이름 사용 가능</span>
+              </div>
+              <input type="text" id="initAdminUsername" value="김남흥" placeholder="한글 이름 또는 아이디 입력 (예: 김남흥)" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-brand-600" required>
+              <p class="text-[10px] text-slate-500 mt-0.5">※ 아이디를 본인 한글 성명('김남흥')과 동일하게 바로 사용하실 수 있습니다.</p>
+            </div>
+
+            <div>
+              <label for="initAdminPassword" class="block text-xs font-bold text-slate-700 mb-1">비밀번호</label>
+              <input type="password" id="initAdminPassword" placeholder="안전한 비밀번호 (4자 이상)" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-brand-600" required>
+            </div>
+
+            <div>
+              <label for="initAdminPasswordConfirm" class="block text-xs font-bold text-slate-700 mb-1">비밀번호 확인</label>
+              <input type="password" id="initAdminPasswordConfirm" placeholder="비밀번호 다시 입력" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-brand-600" required>
+            </div>
+
+            <div id="initAdminErrorMsg" class="hidden p-2 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs"></div>
+
+            <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 active:scale-98 text-white font-bold py-3 px-4 rounded-xl text-xs transition shadow-md flex items-center justify-center space-x-1.5">
+              <span>최초 관리자 생성 및 즉시 시작</span>
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+            </button>
+          </form>
+
+          <div class="mt-4 pt-3 border-t border-slate-100 text-center">
+            <button id="toggleGeneralLoginBtn" type="button" class="text-xs text-slate-500 hover:text-slate-700 underline">
+              기존 직원(대표님, 고수현, 강달성) 계정으로 먼저 로그인하기 &rarr;
+            </button>
+          </div>
+        </div>
+
+        <!-- Login Card -->
+        <div id="loginCard" class="bg-white rounded-2xl p-5 border border-slate-200 shadow-md">
+          <div class="text-center mb-5">
+            <div class="w-12 h-12 rounded-2xl bg-brand-800 text-white flex items-center justify-center mx-auto mb-2 text-xl font-black shadow-md">
+              연차
+            </div>
+            <h2 class="text-lg font-bold text-slate-800">우리 회사 사내 연차관리</h2>
+            <p class="text-xs text-slate-500 mt-1">자체 사내 계정으로 로그인합니다</p>
+            <div id="noAdminNotice" class="hidden mt-2 p-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+              <span class="font-bold">안내:</span> 현재 관리자 계정이 미등록 상태입니다. 
+              <button id="backToInitAdminBtn" type="button" class="text-brand-600 font-bold underline ml-1">관리자 직접 가입하기 &rarr;</button>
+            </div>
+          </div>
+
+          <form id="authLoginForm" class="space-y-3">
+            <div>
+              <label for="loginUsername" class="block text-xs font-bold text-slate-700 mb-1">사내 아이디</label>
+              <input type="text" id="loginUsername" placeholder="아이디 또는 이름 입력 (예: 김남흥)" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-brand-600" required>
+            </div>
+            <div>
+              <label for="loginPassword" class="block text-xs font-bold text-slate-700 mb-1">비밀번호</label>
+              <input type="password" id="loginPassword" placeholder="비밀번호 입력" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2.5 text-sm text-slate-800 focus:outline-none focus:border-brand-600" required>
+            </div>
+
+            <!-- Login Attempt / Lock Warning -->
+            <div id="loginErrorMsg" class="hidden p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium"></div>
+
+            <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 active:scale-98 text-white font-bold py-3 px-4 rounded-xl text-sm transition shadow-md">
+              로그인
+            </button>
+          </form>
+
+          <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+            <button id="showSignupCardBtn" class="text-brand-600 font-bold hover:underline">
+              신규 회원가입 신청
+            </button>
+            <button id="requestPwResetBtn" class="text-slate-500 hover:text-slate-700">
+              비밀번호 분실 문의
+            </button>
+          </div>
+
+          <!-- Quick Registered Users Box (Dynamic) -->
+          <div class="mt-4 p-3 bg-slate-50 rounded-xl border border-slate-200">
+            <div class="flex justify-between items-center mb-1.5">
+              <span class="text-[11px] font-bold text-slate-600">등록된 사내 계정:</span>
+              <span id="quickLoginCount" class="text-[10px] text-brand-600 font-bold">0명</span>
+            </div>
+            <div id="quickLoginContainer" class="space-y-1 text-xs">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Signup Card -->
+        <div id="signupCard" class="hidden bg-white rounded-2xl p-5 border border-slate-200 shadow-md">
+          <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
+            <div>
+              <h2 class="text-base font-bold text-slate-800">신규 직원 회원가입</h2>
+              <p class="text-[11px] text-slate-500">가입 후 관리자(김남흥 차장) 승인 후 활성화됩니다.</p>
+            </div>
+            <button id="backToLoginBtn" class="text-xs text-slate-400 hover:text-slate-600">닫기</button>
+          </div>
+
+          <form id="authSignupForm" class="space-y-3">
+            <div>
+              <label for="signupName" class="block text-xs font-bold text-slate-700 mb-1">성명 (실명)</label>
+              <input type="text" id="signupName" placeholder="예: 홍길동" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none" required>
+            </div>
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <label for="signupUsername" class="text-xs font-bold text-slate-700">희망 사내 아이디</label>
+                <button type="button" id="copyNameToUsernameBtn" class="text-[10px] text-brand-600 font-bold hover:underline">이름과 동일하게 설정</button>
+              </div>
+              <input type="text" id="signupUsername" placeholder="한글 이름 또는 아이디 입력 (예: 홍길동)" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none" required>
+              <p class="text-[10px] text-slate-500 mt-0.5">※ 영문 아이디 대신 본인 한글 이름을 아이디로 쓰셔도 됩니다.</p>
+            </div>
+            <div>
+              <label for="signupPassword" class="block text-xs font-bold text-slate-700 mb-1">비밀번호</label>
+              <input type="password" id="signupPassword" placeholder="안전한 비밀번호 (6자 이상)" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none" required>
+            </div>
+            <div>
+              <label for="signupPasswordConfirm" class="block text-xs font-bold text-slate-700 mb-1">비밀번호 확인</label>
+              <input type="password" id="signupPasswordConfirm" placeholder="비밀번호 다시 입력" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none" required>
+            </div>
+
+            <div class="p-2.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-[11px] leading-relaxed">
+              <span class="font-bold">안내:</span> 사용자는 가입 시 임의로 권한을 선택할 수 없습니다. 관리자가 신원을 확인한 후 적절한 권한(일반 직원/대표)을 부여합니다.
+            </div>
+
+            <div id="signupErrorMsg" class="hidden p-2 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs"></div>
+
+            <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3 px-4 rounded-xl text-xs transition shadow-sm">
+              가입 신청 제출
+            </button>
+          </form>
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- Fixed Bottom Mobile Navigation Bar -->
+    <nav id="bottomNav" class="fixed bottom-0 z-40 w-full max-w-[430px] bg-white/95 backdrop-blur border-t border-slate-200 bottom-nav shadow-lg">
+      <div class="grid grid-cols-5 h-14 items-center">
+        
+        <!-- 1. Home -->
+        <button type="button" data-view="viewHome" class="nav-tab-btn flex flex-col items-center justify-center text-brand-600 font-bold transition">
+          <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+          <span class="text-[10px]">홈</span>
+        </button>
+
+        <!-- 2. Shared Calendar -->
+        <button type="button" data-view="viewCalendar" class="nav-tab-btn flex flex-col items-center justify-center text-slate-400 hover:text-slate-600 font-medium transition">
+          <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          <span class="text-[10px]">공유 달력</span>
+        </button>
+
+        <!-- 3. Leave Apply (Highlighted Center Button) -->
+        <button type="button" data-view="viewApply" class="nav-tab-btn flex flex-col items-center justify-center text-slate-400 hover:text-slate-600 font-medium transition">
+          <div class="w-9 h-9 rounded-full bg-brand-600 text-white flex items-center justify-center shadow-md -mt-3 mb-0.5">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+          </div>
+          <span class="text-[10px]">연차 신청</span>
+        </button>
+
+        <!-- 4. History -->
+        <button type="button" data-view="viewHistory" class="nav-tab-btn flex flex-col items-center justify-center text-slate-400 hover:text-slate-600 font-medium transition">
+          <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>
+          <span class="text-[10px]">내역</span>
+        </button>
+
+        <!-- 5. Admin (Visible only to Admin) -->
+        <button type="button" id="adminNavBtn" data-view="viewAdmin" class="nav-tab-btn flex flex-col items-center justify-center text-slate-400 hover:text-slate-600 font-medium transition">
+          <div class="relative">
+            <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            <span id="adminNavBadgeDot" class="hidden absolute -top-1 -right-1 w-2 h-2 rounded-full bg-rose-500"></span>
+          </div>
+          <span class="text-[10px]">관리</span>
+        </button>
+
+      </div>
+    </nav>
+
+    <!-- Global In-Page Action Modal (For Approval, Rejection Reason, Confirmation) -->
+    <div id="actionModal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+      <div class="w-full max-w-[360px] bg-white rounded-2xl p-5 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+        <h3 id="modalTitle" class="text-base font-bold text-slate-800 mb-1">결재 처리</h3>
+        <p id="modalDesc" class="text-xs text-slate-500 mb-3">내용을 확인하고 처리해 주세요.</p>
+        
+        <div id="modalInputArea" class="hidden mb-4">
+          <label for="modalInput" id="modalInputLabel" class="block text-xs font-bold text-slate-700 mb-1">사유 입력</label>
+          <textarea id="modalInput" rows="2" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-brand-600"></textarea>
+        </div>
+
+        <div class="flex items-center space-x-2">
+          <button id="modalCancelBtn" class="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition">
+            취소
+          </button>
+          <button id="modalConfirmBtn" class="flex-1 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-xs font-bold text-white transition shadow-sm">
+            확인
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Global Toast Notification Component -->
+    <div id="toast" class="fixed top-16 left-1/2 -translate-x-1/2 z-50 pointer-events-none transition-all duration-300 opacity-0 transform -translate-y-2 max-w-[90%]">
+      <div id="toastBox" class="bg-slate-900/90 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg backdrop-blur flex items-center space-x-2">
+        <span id="toastIcon">✓</span>
+        <span id="toastMsg">알림 메시지</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- APPLICATION LOGIC SCRIPT -->
+  <script>
+    (function() {
+      'use strict';
+
+      // -------------------------------------------------------------
+      // 1. CONSTANTS & SYSTEM RULES
+      // -------------------------------------------------------------
+      var CURRENT_YEAR = 2026;
+      var WORK_HOURS_PER_DAY = 8; // 08:30~17:30 (Lunch 12:30~13:30, net 8h)
+      var STORAGE_KEY = 'ANNUAL_LEAVE_SYSTEM_V4_CLEAN_ALL';
+
+      // 4 Pre-defined time slots
+      var TIME_SLOTS = {
+        '1': { id: '1', time: '08:30~10:30', hours: 2, label: '1구간 (08:30~10:30, 2시간, 0.25일)' },
+        '2': { id: '2', time: '10:30~12:30', hours: 2, label: '2구간 (10:30~12:30, 2시간, 0.25일)' },
+        '3': { id: '3', time: '13:30~15:30', hours: 2, label: '3구간 (13:30~15:30, 2시간, 0.25일)' },
+        '4': { id: '4', time: '15:30~17:30', hours: 2, label: '4구간 (15:30~17:30, 2시간, 0.25일)' }
+      };
+
+      // Initial Holidays for 2026 (Statutory + Company Foundation Day)
+      var DEFAULT_HOLIDAYS = [
+        { date: '2026-01-01', name: '신정' },
+        { date: '2026-02-16', name: '설날 연휴' },
+        { date: '2026-02-17', name: '설날 당일' },
+        { date: '2026-02-18', name: '설날 연휴' },
+        { date: '2026-03-01', name: '삼일절' },
+        { date: '2026-03-02', name: '대체공휴일' },
+        { date: '2026-05-01', name: '근로자의 날' },
+        { date: '2026-05-05', name: '어린이날' },
+        { date: '2026-05-24', name: '부처님오신날' },
+        { date: '2026-06-06', name: '현충일' },
+        { date: '2026-07-15', name: '회사 창립기념일 (유급휴무)' },
+        { date: '2026-08-15', name: '광복절' },
+        { date: '2026-09-24', name: '추석 연휴' },
+        { date: '2026-09-25', name: '추석 당일' },
+        { date: '2026-09-26', name: '추석 연휴' },
+        { date: '2026-10-03', name: '개천절' },
+        { date: '2026-10-09', name: '한글날' },
+        { date: '2026-12-25', name: '성탄절' }
+      ];
+
+      // Initial 4 Employees as per prompt specifications
+      var DEFAULT_USERS = [];
+
+      // Initial sample leave records for demonstration and immediate test verification
+      var DEFAULT_LEAVES = [];
+
+      // Initial Audit Log
+      var DEFAULT_AUDIT_LOGS = [
+        {
+          id: 'log_init_clean',
+          timestamp: '2026-11-04 09:00:00',
+          operator: '시스템',
+          action: '시스템 초기화 완료',
+          details: '전체 계정 초기화 완료. 최초 관리자 및 직원 신규 가입 대기 상태입니다.'
+        }
+      ];
+
+      // -------------------------------------------------------------
+      // 2. STATE MANAGEMENT & LOCAL STORAGE PERSISTENCE
+      // -------------------------------------------------------------
+      var state = {
+        currentUser: null,
+        users: [],
+        leaves: [],
+        holidays: [],
+        auditLogs: [],
+        manualAdjustments: [],
+        currentView: 'viewHome',
+        calendarDate: new Date(2026, 10, 4), // 2026년 11월 4일
+        selectedCalendarDateStr: '2026-11-04',
+        applyMode: 'SLOT', // 'SLOT' or 'FULL_RANGE'
+        selectedSlots: []
+      };
+
+      function loadDatabase() {
+        try {
+          var raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            var data = JSON.parse(raw);
+            state.users = data.users || DEFAULT_USERS;
+            state.leaves = data.leaves || DEFAULT_LEAVES;
+            state.holidays = data.holidays || DEFAULT_HOLIDAYS;
+            state.auditLogs = data.auditLogs || DEFAULT_AUDIT_LOGS;
+            state.manualAdjustments = data.manualAdjustments || [];
+          } else {
+            resetToDefaultDatabase();
+          }
+        } catch (e) {
+          console.error('Failed to parse localStorage, resetting to defaults', e);
+          resetToDefaultDatabase();
+        }
+
+        // If there is an active admin, select them, else null
+        var activeAdmin = state.users.find(function(u) { return u.role === 'admin' && u.status === 'ACTIVE'; });
+        if (activeAdmin) {
+          state.currentUser = activeAdmin;
+        } else {
+          state.currentUser = null;
+        }
+      }
+
+      function saveDatabase() {
+        try {
+          var data = {
+            users: state.users,
+            leaves: state.leaves,
+            holidays: state.holidays,
+            auditLogs: state.auditLogs,
+            manualAdjustments: state.manualAdjustments,
+            savedAt: new Date().toISOString()
+          };
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        } catch (e) {
+          console.error('LocalStorage save failed', e);
+        }
+      }
+
+      function resetToDefaultDatabase() {
+        state.users = JSON.parse(JSON.stringify(DEFAULT_USERS));
+        state.leaves = JSON.parse(JSON.stringify(DEFAULT_LEAVES));
+        state.holidays = JSON.parse(JSON.stringify(DEFAULT_HOLIDAYS));
+        state.auditLogs = JSON.parse(JSON.stringify(DEFAULT_AUDIT_LOGS));
+        state.manualAdjustments = [];
+        saveDatabase();
+      }
+
+      // Add audit log entry
+      function addAuditLog(action, details, operatorName) {
+        var op = operatorName || (state.currentUser ? (state.currentUser.name + ' ' + state.currentUser.position) : '시스템');
+        var nowStr = formatDateFull(new Date());
+        var log = {
+          id: 'log_' + Date.now() + '_' + Math.floor(Math.random()*1000),
+          timestamp: nowStr,
+          operator: op,
+          action: action,
+          details: details
+        };
+        state.auditLogs.unshift(log);
+        saveDatabase();
+      }
+
+      // -------------------------------------------------------------
+      // 3. ANNUAL LEAVE CALCULATION ENGINE (회사 연차 규칙)
+      // -------------------------------------------------------------
+      /**
+       * Calculate annual leave accrual according to company rules:
+       * 1) Jan 1 bulk grant every year.
+       * 2) Year 1 (hire year): 1 day per month worked with perfect attendance (max 11 days).
+       * 3) Year 2 (first year after hire): 15 days on Jan 1.
+       * 4) Year 3+: Tenure leave: +1 day every 2 years after Year 2, up to 25 days max.
+       * Formula for year > hireYear:
+       *   yearsElapsed = year - hireYear
+       *   accrued = Math.min(25, 15 + Math.floor((yearsElapsed - 1) / 2))
+       *
+       * Verification check:
+       * - 고수현 (hire 2023-07-01):
+       *   2024: 15일, 2025: 15일, 2026: 16일 (yearsElapsed 3 -> 15 + floor(2/2) = 16)
+       * - 김남흥 (hire 2021-08-16):
+       *   2022: 15일, 2023: 15일, 2024: 16일, 2025: 16일, 2026: 17일 (yearsElapsed 5 -> 15 + floor(4/2) = 17)
+       */
+      function calculateBaseAnnualLeave(hireDateStr, targetYear) {
+        if (!hireDateStr) return { days: 15, hours: 120 };
+        var hireDate = new Date(hireDateStr);
+        if (isNaN(hireDate.getTime())) return { days: 15, hours: 120 };
+
+        var hireYear = hireDate.getFullYear();
+        var hireMonth = hireDate.getMonth() + 1; // 1~12
+
+        if (targetYear < hireYear) {
+          return { days: 0, hours: 0, reason: '입사 전 연도' };
+        }
+
+        if (targetYear === hireYear) {
+          // 입사 첫해: 입사월부터 12월까지 개근 기준 (최대 11일)
+          var monthsRemaining = Math.max(0, 12 - hireMonth);
+          var daysYear1 = Math.min(11, monthsRemaining);
+          return {
+            days: daysYear1,
+            hours: daysYear1 * WORK_HOURS_PER_DAY,
+            reason: '입사 첫해 (월 개근 기준 최대 ' + daysYear1 + '일)'
+          };
+        }
+
+        var yearsElapsed = targetYear - hireYear;
+        // yearsElapsed === 1 -> 15 days
+        // yearsElapsed === 2 -> 15 days
+        // yearsElapsed === 3 -> 16 days
+        // yearsElapsed === 4 -> 16 days
+        // yearsElapsed === 5 -> 17 days
+        var additional = Math.floor((yearsElapsed - 1) / 2);
+        var totalDays = Math.min(25, 15 + additional);
+
+        return {
+          days: totalDays,
+          hours: totalDays * WORK_HOURS_PER_DAY,
+          reason: '근속 ' + (yearsElapsed + 1) + '년차 기준'
+        };
+      }
+
+      // Calculate an employee's comprehensive leave balance for a given year
+      function getEmployeeLeaveBalance(userId, year) {
+        year = year || CURRENT_YEAR;
+        var user = state.users.find(function(u) { return u.id === userId; });
+        if (!user) return { isUnlimited: false, accruedHours: 0, accruedDays: 0, usedHours: 0, usedDays: 0, pendingHours: 0, pendingDays: 0, remainingHours: 0, remainingDays: 0 };
+
+        // 1. Sum approved leaves for this user in this calendar year
+        var usedHours = 0;
+        var pendingHours = 0;
+
+        state.leaves.forEach(function(l) {
+          if (l.userId === userId) {
+            var leaveYear = new Date(l.date || l.startDate).getFullYear();
+            if (leaveYear === year) {
+              if (l.status === 'APPROVED') {
+                usedHours += l.hours;
+              } else if (l.status === 'WAITING_FIRST' || l.status === 'WAITING_FINAL') {
+                pendingHours += l.hours;
+              }
+            }
+          }
+        });
+
+        // 권한이 대표(최종 승인자)인 경우 연차 무제한 부여
+        if (user.role === 'ceo') {
+          return {
+            isUnlimited: true,
+            accruedHours: 99999,
+            accruedDays: '무제한',
+            usedHours: usedHours,
+            usedDays: usedHours / WORK_HOURS_PER_DAY,
+            pendingHours: pendingHours,
+            pendingDays: pendingHours / WORK_HOURS_PER_DAY,
+            remainingHours: 99999,
+            remainingDays: '무제한',
+            availableRemainingHours: 99999,
+            availableRemainingDays: '무제한'
+          };
+        }
+
+        // 2. Base accrued for general staff and admin
+        var base = calculateBaseAnnualLeave(user.hireDate, year);
+        var totalAccruedHours = base.hours;
+
+        state.manualAdjustments.forEach(function(adj) {
+          if (adj.userId === userId && adj.year === year) {
+            totalAccruedHours += adj.deltaHours;
+          }
+        });
+
+        var remainingHours = totalAccruedHours - usedHours;
+        var availableRemainingHours = totalAccruedHours - usedHours - pendingHours;
+
+        return {
+          isUnlimited: false,
+          accruedHours: totalAccruedHours,
+          accruedDays: totalAccruedHours / WORK_HOURS_PER_DAY,
+          usedHours: usedHours,
+          usedDays: usedHours / WORK_HOURS_PER_DAY,
+          pendingHours: pendingHours,
+          pendingDays: pendingHours / WORK_HOURS_PER_DAY,
+          remainingHours: remainingHours,
+          remainingDays: remainingHours / WORK_HOURS_PER_DAY,
+          availableRemainingHours: availableRemainingHours,
+          availableRemainingDays: availableRemainingHours / WORK_HOURS_PER_DAY
+        };
+      }
+
+      // -------------------------------------------------------------
+      // 4. WORKING DAYS & HOLIDAY DEDUCTION CALCULATION
+      // -------------------------------------------------------------
+      function isHolidayOrWeekend(dateObj) {
+        var dayOfWeek = dateObj.getDay();
+        if (dayOfWeek === 0 || dayOfWeek === 6) {
+          return { isOff: true, reason: dayOfWeek === 0 ? '일요일' : '토요일' };
+        }
+        var dateStr = formatDateYMD(dateObj);
+        var foundHoliday = state.holidays.find(function(h) { return h.date === dateStr; });
+        if (foundHoliday) {
+          return { isOff: true, reason: foundHoliday.name };
+        }
+        return { isOff: false };
+      }
+
+      // Calculate working days and hours between two dates (inclusive)
+      function calculateWorkingDays(startDateStr, endDateStr) {
+        if (!startDateStr || !endDateStr) return { workingDays: 0, workingHours: 0, excludedDays: [] };
+        
+        var start = new Date(startDateStr);
+        var end = new Date(endDateStr);
+        if (start > end) {
+          var temp = start;
+          start = end;
+          end = temp;
+        }
+
+        var workingDays = 0;
+        var excludedDays = [];
+        var curr = new Date(start);
+
+        while (curr <= end) {
+          var check = isHolidayOrWeekend(curr);
+          var dStr = formatDateYMD(curr);
+          if (check.isOff) {
+            excludedDays.push({ date: dStr, reason: check.reason });
+          } else {
+            workingDays++;
+          }
+          curr.setDate(curr.getDate() + 1);
+        }
+
+        return {
+          workingDays: workingDays,
+          workingHours: workingDays * WORK_HOURS_PER_DAY,
+          excludedDays: excludedDays
+        };
+      }
+
+      // -------------------------------------------------------------
+      // 5. DATE FORMATTING HELPERS
+      // -------------------------------------------------------------
+      function formatDateYMD(date) {
+        var y = date.getFullYear();
+        var m = ('0' + (date.getMonth() + 1)).slice(-2);
+        var d = ('0' + date.getDate()).slice(-2);
+        return y + '-' + m + '-' + d;
+      }
+
+      function formatDateFull(date) {
+        var y = date.getFullYear();
+        var m = ('0' + (date.getMonth() + 1)).slice(-2);
+        var d = ('0' + date.getDate()).slice(-2);
+        var hh = ('0' + date.getHours()).slice(-2);
+        var mm = ('0' + date.getMinutes()).slice(-2);
+        return y + '-' + m + '-' + d + ' ' + hh + ':' + mm;
+      }
+
+      function formatDaysAndHours(hours) {
+        var days = hours / WORK_HOURS_PER_DAY;
+        var daysFormatted = (Math.round(days * 100) / 100).toString();
+        return daysFormatted + '일 (' + hours + '시간)';
+      }
+
+      function getStatusBadge(status) {
+        switch (status) {
+          case 'WAITING_FIRST':
+            return '<span class="px-2 py-0.5 text-[11px] font-bold rounded-md bg-blue-100 text-blue-700">1차 승인 대기</span>';
+          case 'WAITING_FINAL':
+            return '<span class="px-2 py-0.5 text-[11px] font-bold rounded-md bg-purple-100 text-purple-700">최종 승인 대기</span>';
+          case 'APPROVED':
+            return '<span class="px-2 py-0.5 text-[11px] font-bold rounded-md bg-emerald-100 text-emerald-700">최종 승인 완료</span>';
+          case 'REJECTED':
+            return '<span class="px-2 py-0.5 text-[11px] font-bold rounded-md bg-rose-100 text-rose-700">반려됨</span>';
+          case 'CANCEL_REQUESTED':
+            return '<span class="px-2 py-0.5 text-[11px] font-bold rounded-md bg-amber-100 text-amber-700">취소 승인 대기</span>';
+          case 'CANCELLED':
+            return '<span class="px-2 py-0.5 text-[11px] font-bold rounded-md bg-slate-200 text-slate-600">취소 완료</span>';
+          default:
+            return '<span class="px-2 py-0.5 text-[11px] font-bold rounded-md bg-slate-100 text-slate-600">' + status + '</span>';
+        }
+      }
+
+      // -------------------------------------------------------------
+      // 6. UI RENDERERS & VIEW ROUTING
+      // -------------------------------------------------------------
+      function switchView(viewId) {
+        state.currentView = viewId;
+        var views = ['viewHome', 'viewCalendar', 'viewApply', 'viewHistory', 'viewAdmin', 'viewAuth'];
+        views.forEach(function(id) {
+          var el = document.getElementById(id);
+          if (el) {
+            if (id === viewId) {
+              el.classList.remove('hidden');
+            } else {
+              el.classList.add('hidden');
+            }
+          }
+        });
+
+        // Update Bottom Nav active indicator
+        document.querySelectorAll('.nav-tab-btn').forEach(function(btn) {
+          var target = btn.getAttribute('data-view');
+          if (target === viewId) {
+            btn.classList.add('text-brand-600', 'font-bold');
+            btn.classList.remove('text-slate-400');
+          } else {
+            btn.classList.remove('text-brand-600', 'font-bold');
+            btn.classList.add('text-slate-400');
+          }
+        });
+
+        // Render target view data
+        if (viewId === 'viewHome') renderHome();
+        if (viewId === 'viewCalendar') renderCalendar();
+        if (viewId === 'viewApply') renderApplyForm();
+        if (viewId === 'viewHistory') renderHistory();
+        if (viewId === 'viewAdmin') renderAdmin();
+      }
+
+      function updateHeader() {
+        var user = state.currentUser;
+        if (!user) return;
+        var headerNameEl = document.getElementById('headerUserName');
+        var adminNavBtn = document.getElementById('adminNavBtn');
+        var adminNavBadgeDot = document.getElementById('adminNavBadgeDot');
+
+        if (headerNameEl) {
+          headerNameEl.textContent = user.name + (user.position ? (' ' + user.position) : '');
+        }
+
+        // Show Admin Nav tab ONLY to Admin (김남흥 차장)
+        if (adminNavBtn) {
+          if (user.role === 'admin') {
+            adminNavBtn.classList.remove('hidden');
+            // Check if there are pending signups or 1st approvals
+            var pending1st = state.leaves.filter(function(l) { return l.status === 'WAITING_FIRST'; }).length;
+            var pendingSignup = state.users.filter(function(u) { return u.status === 'PENDING_APPROVAL'; }).length;
+            if (adminNavBadgeDot) {
+              if (pending1st > 0 || pendingSignup > 0) {
+                adminNavBadgeDot.classList.remove('hidden');
+              } else {
+                adminNavBadgeDot.classList.add('hidden');
+              }
+            }
+          } else {
+            adminNavBtn.classList.add('hidden');
+          }
+        }
+      }
+
+      // RENDER HOME VIEW
+      function renderHome() {
+        var user = state.currentUser;
+        if (!user) return;
+
+        updateHeader();
+
+        // 1. User Banner
+        var homeUserName = document.getElementById('homeUserName');
+        var homeUserPosition = document.getElementById('homeUserPosition');
+        var homeRoleBadge = document.getElementById('homeRoleBadge');
+        var homeHireDateText = document.getElementById('homeHireDateText');
+
+        if (homeUserName) homeUserName.textContent = user.name;
+        if (homeUserPosition) homeUserPosition.textContent = user.position;
+        if (homeHireDateText) {
+          var hireYr = new Date(user.hireDate).getFullYear();
+          var tenure = CURRENT_YEAR - hireYr + 1;
+          homeHireDateText.textContent = '입사일: ' + user.hireDate + ' (' + tenure + '년차)';
+        }
+
+        if (homeRoleBadge) {
+          if (user.role === 'admin') {
+            homeRoleBadge.textContent = '시스템 관리자 · 1차 결재자';
+            homeRoleBadge.className = 'px-2 py-0.5 text-[11px] font-bold rounded-full bg-blue-500/30 text-white backdrop-blur';
+          } else if (user.role === 'ceo') {
+            homeRoleBadge.textContent = '최종 결재자 (대표이사)';
+            homeRoleBadge.className = 'px-2 py-0.5 text-[11px] font-bold rounded-full bg-purple-500/30 text-white backdrop-blur';
+          } else {
+            homeRoleBadge.textContent = '일반 직원';
+            homeRoleBadge.className = 'px-2 py-0.5 text-[11px] font-bold rounded-full bg-emerald-500/30 text-white backdrop-blur';
+          }
+        }
+
+        // 2. Leave Balance Stats
+        var bal = getEmployeeLeaveBalance(user.id, CURRENT_YEAR);
+        var statAccruedDays = document.getElementById('statAccruedDays');
+        var statAccruedHours = document.getElementById('statAccruedHours');
+        var statUsedDays = document.getElementById('statUsedDays');
+        var statUsedHours = document.getElementById('statUsedHours');
+        var statPendingDays = document.getElementById('statPendingDays');
+        var statPendingHours = document.getElementById('statPendingHours');
+        var statRemainingDays = document.getElementById('statRemainingDays');
+        var statRemainingHours = document.getElementById('statRemainingHours');
+
+        if (statAccruedDays) statAccruedDays.textContent = bal.isUnlimited ? '무제한' : (bal.accruedDays + '일');
+        if (statAccruedHours) statAccruedHours.textContent = bal.isUnlimited ? '대표 권한' : (bal.accruedHours + '시간');
+        if (statUsedDays) statUsedDays.textContent = bal.usedDays + '일';
+        if (statUsedHours) statUsedHours.textContent = bal.usedHours + '시간';
+        if (statPendingDays) statPendingDays.textContent = bal.pendingDays + '일';
+        if (statPendingHours) statPendingHours.textContent = bal.pendingHours + '시간';
+        if (statRemainingDays) statRemainingDays.textContent = bal.isUnlimited ? '무제한' : (bal.remainingDays + '일');
+        if (statRemainingHours) statRemainingHours.textContent = bal.isUnlimited ? '제한 없음' : (bal.remainingHours + '시간');
+
+        // 3. Admin Approval Widgets
+        var adminApprovalSection = document.getElementById('adminApprovalSection');
+        var ceoApprovalSection = document.getElementById('ceoApprovalSection');
+
+        if (user.role === 'admin') {
+          adminApprovalSection.classList.remove('hidden');
+          renderAdminApprovalQueue();
+        } else {
+          adminApprovalSection.classList.add('hidden');
+        }
+
+        if (user.role === 'ceo') {
+          ceoApprovalSection.classList.remove('hidden');
+          renderCeoApprovalQueue();
+        } else {
+          ceoApprovalSection.classList.add('hidden');
+        }
+
+        // 4. Team Overview List
+        renderTeamOverview();
+
+        // 5. This Month Approved Leave List
+        renderHomeThisMonth();
+
+        // 6. My Recent Applications
+        renderHomeMyRecent();
+      }
+
+      function renderAdminApprovalQueue() {
+        var list1stPending = document.getElementById('list1stPendingApprovals');
+        var badgeCount = document.getElementById('badge1stPendingCount');
+        var pending1st = state.leaves.filter(function(l) { return l.status === 'WAITING_FIRST'; });
+
+        if (badgeCount) badgeCount.textContent = pending1st.length + '건';
+
+        if (!list1stPending) return;
+        if (pending1st.length === 0) {
+          list1stPending.innerHTML = '<div class="text-xs text-slate-400 py-3 text-center bg-slate-50 rounded-xl">대기 중인 1차 결재가 없습니다.</div>';
+        } else {
+          var html = '';
+          pending1st.forEach(function(l) {
+            html += '<div class="p-3 bg-slate-50 border border-slate-200 rounded-xl flex flex-col space-y-2">' +
+              '<div class="flex justify-between items-start">' +
+                '<div>' +
+                  '<span class="text-xs font-bold text-slate-800">' + l.userName + ' ' + l.userPosition + '</span>' +
+                  '<span class="ml-1.5 text-[11px] text-blue-600 font-semibold">' + (l.applyType === 'SLOT' ? l.slotTimes : (l.startDate + '~' + l.endDate)) + '</span>' +
+                  '<span class="block text-[11px] text-slate-500 mt-0.5">' + formatDaysAndHours(l.hours) + (l.memo ? (' · ' + l.memo) : '') + '</span>' +
+                '</div>' +
+                getStatusBadge(l.status) +
+              '</div>' +
+              '<div class="flex space-x-1.5 pt-1 border-t border-slate-200">' +
+                '<button type="button" class="btn-1st-approve flex-1 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition" data-id="' + l.id + '">1차 승인</button>' +
+                '<button type="button" class="btn-1st-reject flex-1 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-lg transition" data-id="' + l.id + '">반려</button>' +
+              '</div>' +
+            '</div>';
+          });
+          list1stPending.innerHTML = html;
+        }
+
+        // Signup pending
+        var listSignup = document.getElementById('listSignupPendingUsers');
+        var badgeSignup = document.getElementById('badgeSignupPendingCount');
+        var pendingSignups = state.users.filter(function(u) { return u.status === 'PENDING_APPROVAL'; });
+
+        if (badgeSignup) badgeSignup.textContent = pendingSignups.length + '명';
+        if (listSignup) {
+          if (pendingSignups.length === 0) {
+            listSignup.innerHTML = '<div class="text-xs text-slate-400 py-3 text-center bg-slate-50 rounded-xl">승인 대기 중인 회원가입이 없습니다.</div>';
+          } else {
+            var sHtml = '';
+            pendingSignups.forEach(function(u) {
+              sHtml += '<div class="p-3 bg-slate-50 border border-amber-200 rounded-xl flex items-center justify-between">' +
+                '<div>' +
+                  '<span class="text-xs font-bold text-slate-800">' + u.name + ' (' + u.username + ')</span>' +
+                  '<span class="block text-[10px] text-slate-500 mt-0.5">신청 시각: ' + (u.createdAt || '최근') + '</span>' +
+                '</div>' +
+                '<div class="flex space-x-1">' +
+                  '<button type="button" class="btn-approve-user px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg" data-id="' + u.id + '">승인 및 권한 부여</button>' +
+                '</div>' +
+              '</div>';
+            });
+            listSignup.innerHTML = sHtml;
+          }
+        }
+      }
+
+      function renderCeoApprovalQueue() {
+        var listCeoPending = document.getElementById('listCeoPendingApprovals');
+        var badgeCount = document.getElementById('badgeCeoPendingCount');
+        var pendingCeo = state.leaves.filter(function(l) { return l.status === 'WAITING_FINAL'; });
+
+        if (badgeCount) badgeCount.textContent = pendingCeo.length + '건';
+
+        if (!listCeoPending) return;
+        if (pendingCeo.length === 0) {
+          listCeoPending.innerHTML = '<div class="text-xs text-slate-400 py-3 text-center bg-slate-50 rounded-xl">대기 중인 최종 결재가 없습니다.</div>';
+        } else {
+          var html = '';
+          pendingCeo.forEach(function(l) {
+            html += '<div class="p-3 bg-slate-50 border border-purple-200 rounded-xl flex flex-col space-y-2">' +
+              '<div class="flex justify-between items-start">' +
+                '<div>' +
+                  '<div class="flex items-center space-x-1.5">' +
+                    '<span class="text-xs font-bold text-slate-800">' + l.userName + ' ' + l.userPosition + '</span>' +
+                    '<span class="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.2 rounded font-semibold">' + (l.firstApprover || '1차 승인완료') + '</span>' +
+                  '</div>' +
+                  '<span class="text-[11px] text-purple-700 font-semibold block mt-0.5">' + (l.applyType === 'SLOT' ? (l.date + ' ' + l.slotTimes) : (l.startDate + ' ~ ' + l.endDate)) + '</span>' +
+                  '<span class="text-[11px] text-slate-500 block">' + formatDaysAndHours(l.hours) + (l.memo ? (' · ' + l.memo) : '') + '</span>' +
+                '</div>' +
+                getStatusBadge(l.status) +
+              '</div>' +
+              '<div class="flex space-x-1.5 pt-1 border-t border-slate-200">' +
+                '<button type="button" class="btn-ceo-approve flex-1 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg transition" data-id="' + l.id + '">최종 승인 (연차 확정)</button>' +
+                '<button type="button" class="btn-ceo-reject flex-1 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold rounded-lg transition" data-id="' + l.id + '">반려</button>' +
+              '</div>' +
+            '</div>';
+          });
+          listCeoPending.innerHTML = html;
+        }
+      }
+
+      function renderTeamOverview() {
+        var teamList = document.getElementById('teamLeaveStatusList');
+        var memberCount = document.getElementById('teamMemberCount');
+        if (memberCount) memberCount.textContent = state.users.filter(function(u) { return u.status === 'ACTIVE'; }).length + '명 등록';
+
+        if (!teamList) return;
+        var html = '';
+        state.users.forEach(function(u) {
+          if (u.status !== 'ACTIVE') return;
+          var bal = getEmployeeLeaveBalance(u.id, CURRENT_YEAR);
+          var isSelf = state.currentUser && state.currentUser.id === u.id;
+          
+          html += '<div class="p-2.5 rounded-xl border ' + (isSelf ? 'border-brand-300 bg-brand-50/40' : 'border-slate-100 bg-slate-50/60') + ' flex items-center justify-between">' +
+            '<div class="flex items-center space-x-2">' +
+              '<div class="w-8 h-8 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs">' +
+                u.name.charAt(0) +
+              '</div>' +
+              '<div>' +
+                '<div class="flex items-center space-x-1.5">' +
+                  '<span class="text-xs font-bold text-slate-800">' + u.name + '</span>' +
+                  '<span class="text-[10px] text-slate-500">' + u.position + '</span>' +
+                  (isSelf ? '<span class="text-[9px] bg-brand-600 text-white px-1 rounded">본인</span>' : '') +
+                '</div>' +
+                '<span class="text-[10px] text-slate-400">입사: ' + u.hireDate + '</span>' +
+              '</div>' +
+            '</div>' +
+            '<div class="text-right">' +
+              '<span class="text-xs font-extrabold text-slate-800">' + (bal.isUnlimited ? '무제한' : (bal.remainingDays + '일')) + '</span>' +
+              '<span class="text-[10px] text-slate-400 block">' + (bal.isUnlimited ? ('사용 ' + bal.usedDays + '일 / 연차 무제한') : ('발생 ' + bal.accruedDays + '일 / 사용 ' + bal.usedDays + '일')) + '</span>' +
+            '</div>' +
+          '</div>';
+        });
+        teamList.innerHTML = html;
+      }
+
+      function renderHomeThisMonth() {
+        var list = document.getElementById('homeThisMonthList');
+        if (!list) return;
+
+        // Current month: 2026-11
+        var approvedLeaves = state.leaves.filter(function(l) {
+          if (l.status !== 'APPROVED') return false;
+          var d = l.date || l.startDate;
+          return d && d.startsWith('2026-11');
+        });
+
+        // Sort by date ascending
+        approvedLeaves.sort(function(a, b) {
+          return (a.date || a.startDate).localeCompare(b.date || b.startDate);
+        });
+
+        if (approvedLeaves.length === 0) {
+          list.innerHTML = '<div class="text-xs text-slate-400 py-3 text-center bg-slate-50 rounded-xl">이번 달 예정된 전사 휴가 일정이 없습니다.</div>';
+          return;
+        }
+
+        var html = '';
+        approvedLeaves.forEach(function(l) {
+          var dateDisplay = l.applyType === 'SLOT' ? l.date : (l.startDate + ' ~ ' + l.endDate);
+          html += '<div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">' +
+            '<div class="flex items-center space-x-2.5">' +
+              '<div class="w-7 h-7 rounded-lg bg-blue-100 text-blue-800 flex items-center justify-center font-bold text-[11px]">' +
+                l.userName.charAt(0) +
+              '</div>' +
+              '<div>' +
+                '<div class="font-bold text-slate-800">' + l.userName + ' <span class="text-[11px] font-normal text-slate-500">' + l.userPosition + '</span></div>' +
+                '<div class="text-[11px] text-blue-600 font-semibold">' + dateDisplay + ' (' + (l.slotTimes || (l.hours + '시간')) + ')</div>' +
+              '</div>' +
+            '</div>' +
+            '<span class="text-[11px] font-bold text-slate-700 bg-white border border-slate-200 px-2 py-0.5 rounded-md">' +
+              formatDaysAndHours(l.hours) +
+            '</span>' +
+          '</div>';
+        });
+        list.innerHTML = html;
+      }
+
+      function renderHomeMyRecent() {
+        var list = document.getElementById('homeMyRecentList');
+        var user = state.currentUser;
+        if (!list || !user) return;
+
+        var myLeaves = state.leaves.filter(function(l) { return l.userId === user.id; });
+        myLeaves.sort(function(a, b) { return (b.createdAt || '').localeCompare(a.createdAt || ''); });
+
+        var recent = myLeaves.slice(0, 3);
+        if (recent.length === 0) {
+          list.innerHTML = '<div class="text-xs text-slate-400 py-3 text-center bg-slate-50 rounded-xl">최근 신청한 연차가 없습니다.</div>';
+          return;
+        }
+
+        var html = '';
+        recent.forEach(function(l) {
+          html += '<div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs">' +
+            '<div>' +
+              '<div class="font-bold text-slate-800">' + (l.applyType === 'SLOT' ? (l.date + ' ' + l.slotTimes) : (l.startDate + ' ~ ' + l.endDate)) + '</div>' +
+              '<div class="text-[11px] text-slate-500">' + formatDaysAndHours(l.hours) + '</div>' +
+            '</div>' +
+            '<div>' + getStatusBadge(l.status) + '</div>' +
+          '</div>';
+        });
+        list.innerHTML = html;
+      }
+
+      // RENDER CALENDAR VIEW
+      function renderCalendar() {
+        var year = state.calendarDate.getFullYear();
+        var month = state.calendarDate.getMonth(); // 0~11
+        var monthText = document.getElementById('calCurrentMonthText');
+        if (monthText) monthText.textContent = year + '년 ' + (month + 1) + '월';
+
+        var grid = document.getElementById('calendarGrid');
+        if (!grid) return;
+
+        // First day of month & days in month
+        var firstDayIndex = new Date(year, month, 1).getDay(); // 0: Sun
+        var totalDays = new Date(year, month + 1, 0).getDate();
+
+        // Approved leaves in this month
+        var monthStr = year + '-' + ('0' + (month + 1)).slice(-2);
+        var approvedLeaves = state.leaves.filter(function(l) {
+          return l.status === 'APPROVED';
+        });
+
+        var html = '';
+        // Empty cells before month starts
+        for (var e = 0; e < firstDayIndex; e++) {
+          html += '<div class="h-12 sm:h-14 bg-slate-50/50 rounded-lg border border-transparent"></div>';
+        }
+
+        for (var day = 1; day <= totalDays; day++) {
+          var dayDate = new Date(year, month, day);
+          var dayOfWeek = dayDate.getDay();
+          var dateStr = formatDateYMD(dayDate);
+          var isSelected = (state.selectedCalendarDateStr === dateStr);
+
+          // Check holidays
+          var holidayCheck = isHolidayOrWeekend(dayDate);
+          var isHoliday = holidayCheck.isOff && (dayOfWeek !== 0 && dayOfWeek !== 6);
+
+          // Find approved leaves on this day
+          var leavesOnDay = approvedLeaves.filter(function(l) {
+            if (l.applyType === 'SLOT') {
+              return l.date === dateStr;
+            } else {
+              return dateStr >= l.startDate && dateStr <= l.endDate;
+            }
+          });
+
+          var textColor = 'text-slate-800';
+          if (dayOfWeek === 0) textColor = 'text-rose-500';
+          if (dayOfWeek === 6) textColor = 'text-blue-500';
+          if (isHoliday) textColor = 'text-rose-600 font-bold';
+
+          var borderClass = isSelected ? 'border-2 border-brand-600 bg-brand-50/50 shadow-xs' : 'border border-slate-100 hover:border-slate-300 bg-white';
+
+          html += '<div class="cal-day-cell h-12 sm:h-14 p-1 rounded-lg cursor-pointer flex flex-col justify-between ' + borderClass + '" data-date="' + dateStr + '">' +
+            '<div class="flex items-center justify-between text-[11px] leading-none">' +
+              '<span class="font-bold ' + textColor + '">' + day + '</span>' +
+              (holidayCheck.isOff && holidayCheck.reason && holidayCheck.reason !== '일요일' && holidayCheck.reason !== '토요일' ? '<span class="text-[8px] text-rose-500 truncate max-w-[28px]">' + holidayCheck.reason + '</span>' : '') +
+            '</div>' +
+            '<div class="flex-1 flex flex-col justify-end space-y-0.5 mt-0.5 overflow-hidden">';
+
+          // Leave badges on day
+          if (leavesOnDay.length > 0) {
+            leavesOnDay.slice(0, 2).forEach(function(l) {
+              html += '<span class="text-[9px] bg-brand-100 text-brand-800 rounded px-1 py-0.2 truncate font-semibold block leading-tight">' +
+                l.userName +
+              '</span>';
+            });
+            if (leavesOnDay.length > 2) {
+              html += '<span class="text-[8px] text-slate-500 font-bold">+' + (leavesOnDay.length - 2) + '명</span>';
+            }
+          }
+
+          html += '</div></div>';
+        }
+
+        grid.innerHTML = html;
+
+        // Render selected date vacationer list
+        renderSelectedDateList();
+      }
+
+      function renderSelectedDateList() {
+        var dateStr = state.selectedCalendarDateStr;
+        var badge = document.getElementById('selectedDateBadge');
+        var countEl = document.getElementById('selectedDateCount');
+        var list = document.getElementById('selectedDateLeaveList');
+
+        if (badge) badge.textContent = dateStr;
+
+        var approvedLeaves = state.leaves.filter(function(l) {
+          if (l.status !== 'APPROVED') return false;
+          if (l.applyType === 'SLOT') {
+            return l.date === dateStr;
+          } else {
+            return dateStr >= l.startDate && dateStr <= l.endDate;
+          }
+        });
+
+        if (countEl) countEl.textContent = approvedLeaves.length + '명';
+
+        if (!list) return;
+        if (approvedLeaves.length === 0) {
+          list.innerHTML = '<div class="text-xs text-slate-400 py-4 text-center bg-slate-50 rounded-xl">선택하신 날짜에 등록된 승인 휴가가 없습니다.</div>';
+          return;
+        }
+
+        var html = '';
+        approvedLeaves.forEach(function(l) {
+          var timeDisplay = l.applyType === 'SLOT' ? l.slotTimes : '종일 연차 (08:30~17:30)';
+          html += '<div class="p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between text-xs">' +
+            '<div class="flex items-center space-x-2.5">' +
+              '<div class="w-8 h-8 rounded-full bg-brand-800 text-white flex items-center justify-center font-bold text-xs">' +
+                l.userName.charAt(0) +
+              '</div>' +
+              '<div>' +
+                '<div class="font-bold text-slate-800 text-sm">' + l.userName + ' <span class="text-xs font-normal text-slate-500">' + l.userPosition + '</span></div>' +
+                '<div class="text-xs text-brand-700 font-semibold mt-0.5">' + timeDisplay + '</div>' +
+                '<div class="text-[10px] text-slate-400">결재: ' + (l.finalApprover || '대표님') + ' 최종 승인</div>' +
+              '</div>' +
+            '</div>' +
+            '<div class="text-right">' +
+              '<span class="px-2.5 py-1 rounded-lg bg-blue-100 text-blue-800 font-extrabold text-xs block">' +
+                formatDaysAndHours(l.hours) +
+              '</span>' +
+            '</div>' +
+          '</div>';
+        });
+
+        list.innerHTML = html;
+      }
+
+      // RENDER LEAVE APPLICATION FORM
+      function renderApplyForm() {
+        var user = state.currentUser;
+        if (!user) return;
+
+        var bal = getEmployeeLeaveBalance(user.id, CURRENT_YEAR);
+        var applyCurrentBalance = document.getElementById('applyCurrentBalance');
+        if (applyCurrentBalance) {
+          applyCurrentBalance.textContent = bal.isUnlimited ? '무제한 (대표 권한)' : (bal.availableRemainingDays + '일 (' + bal.availableRemainingHours + 'h)');
+        }
+
+        // Set default dates if empty
+        var singleDateInput = document.getElementById('applySingleDate');
+        var startDateInput = document.getElementById('applyStartDate');
+        var endDateInput = document.getElementById('applyEndDate');
+
+        var todayStr = formatDateYMD(new Date(2026, 10, 5)); // 2026-11-05
+        if (singleDateInput && !singleDateInput.value) singleDateInput.value = todayStr;
+        if (startDateInput && !startDateInput.value) startDateInput.value = todayStr;
+        if (endDateInput && !endDateInput.value) endDateInput.value = todayStr;
+
+        recalculateApplyPreview();
+      }
+
+      function recalculateApplyPreview() {
+        var user = state.currentUser;
+        if (!user) return;
+
+        var bal = getEmployeeLeaveBalance(user.id, CURRENT_YEAR);
+        var totalHours = 0;
+        var totalDays = 0;
+        var conflictCheckDate = '';
+
+        if (state.applyMode === 'SLOT') {
+          // Calculate selected slots
+          state.selectedSlots.forEach(function(slotId) {
+            if (TIME_SLOTS[slotId]) {
+              totalHours += TIME_SLOTS[slotId].hours;
+            }
+          });
+          totalDays = totalHours / WORK_HOURS_PER_DAY;
+          conflictCheckDate = document.getElementById('applySingleDate').value;
+        } else {
+          // Range calculation
+          var sDate = document.getElementById('applyStartDate').value;
+          var eDate = document.getElementById('applyEndDate').value;
+          var calc = calculateWorkingDays(sDate, eDate);
+          totalHours = calc.workingHours;
+          totalDays = calc.workingDays;
+          conflictCheckDate = sDate;
+        }
+
+        // Update Slot count text
+        var slotCountEl = document.getElementById('slotSelectedCount');
+        if (slotCountEl) {
+          slotCountEl.textContent = state.selectedSlots.length + '개 선택됨 (' + totalHours + '시간)';
+        }
+
+        // Update Total & Expected Remaining
+        var calcTotal = document.getElementById('calcTotalRequest');
+        var calcExpected = document.getElementById('calcExpectedBalance');
+        var submitBtn = document.getElementById('submitLeaveBtn');
+
+        if (calcTotal) {
+          calcTotal.textContent = totalDays + '일 (' + totalHours + '시간)';
+        }
+
+        var expectedRemaining = bal.availableRemainingHours - totalHours;
+        var expectedRemainingDays = expectedRemaining / WORK_HOURS_PER_DAY;
+
+        if (calcExpected) {
+          if (bal.isUnlimited) {
+            calcExpected.className = 'font-extrabold text-brand-700 text-sm';
+            calcExpected.textContent = '무제한 (대표 권한)';
+          } else {
+            calcExpected.textContent = expectedRemainingDays + '일 (' + expectedRemaining + '시간)';
+            if (expectedRemaining < 0) {
+              calcExpected.className = 'font-extrabold text-rose-600 text-sm';
+              calcExpected.textContent += ' [잔여 연차 부족]';
+            } else {
+              calcExpected.className = 'font-extrabold text-brand-700 text-sm';
+            }
+          }
+        }
+
+        // Approval flow notice
+        var flowNotice = document.getElementById('calcApprovalFlowNotice');
+        if (flowNotice) {
+          if (user.role === 'admin') {
+            flowNotice.textContent = '차장 본인 신청 → 대표 최종 승인 직행';
+          } else if (user.role === 'ceo') {
+            flowNotice.textContent = '대표 본인 일정 직접 등록';
+          } else {
+            flowNotice.textContent = '차장 1차 승인 → 대표 최종 승인';
+          }
+        }
+
+        // Check Coworker Conflict & Self Overlap
+        checkConflicts(conflictCheckDate, totalHours);
+      }
+
+      function checkConflicts(targetDate, requestedHours) {
+        var user = state.currentUser;
+        if (!user || !targetDate) return;
+
+        var warningEl = document.getElementById('coworkerConflictWarning');
+        var warningText = document.getElementById('conflictWarningText');
+        var errorEl = document.getElementById('selfOverlapError');
+        var submitBtn = document.getElementById('submitLeaveBtn');
+
+        // Check self overlap
+        var selfOverlap = state.leaves.some(function(l) {
+          if (l.userId !== user.id) return false;
+          if (l.status === 'REJECTED' || l.status === 'CANCELLED') return false;
+          if (l.applyType === 'SLOT') {
+            if (l.date === targetDate) {
+              // check overlapping slots
+              return state.selectedSlots.some(function(s) { return (l.slots || []).indexOf(s) !== -1; });
+            }
+          } else {
+            return targetDate >= l.startDate && targetDate <= l.endDate;
+          }
+          return false;
+        });
+
+        if (selfOverlap && requestedHours > 0) {
+          errorEl.classList.remove('hidden');
+          submitBtn.disabled = true;
+          submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        } else {
+          errorEl.classList.add('hidden');
+          submitBtn.disabled = false;
+          submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+
+        // Check coworker schedule conflict on same date
+        var coworkersOnSameDate = state.leaves.filter(function(l) {
+          if (l.userId === user.id) return false;
+          if (l.status === 'REJECTED' || l.status === 'CANCELLED') return false;
+          if (l.applyType === 'SLOT') {
+            return l.date === targetDate;
+          } else {
+            return targetDate >= l.startDate && targetDate <= l.endDate;
+          }
+        });
+
+        if (coworkersOnSameDate.length > 0) {
+          var names = coworkersOnSameDate.map(function(c) { return c.userName + ' ' + c.userPosition; }).join(', ');
+          warningText.textContent = targetDate + '에 [' + names + '] 직원의 휴가 일정이 이미 신청/승인되어 있습니다. 업무 공백을 감안하여 진행하세요.';
+          warningEl.classList.remove('hidden');
+        } else {
+          warningEl.classList.add('hidden');
+        }
+      }
+
+      // RENDER HISTORY VIEW
+      function renderHistory() {
+        var user = state.currentUser;
+        var container = document.getElementById('historyListContainer');
+        var filterVal = document.getElementById('historyFilterSelect').value;
+        if (!container || !user) return;
+
+        var list = state.leaves.filter(function(l) {
+          // If admin or ceo, can see all or own? "본인 신청 및 사용 내역 확인"
+          return l.userId === user.id;
+        });
+
+        // Filter
+        if (filterVal !== 'ALL') {
+          list = list.filter(function(l) {
+            if (filterVal === 'PENDING') return l.status === 'WAITING_FIRST' || l.status === 'WAITING_FINAL';
+            if (filterVal === 'APPROVED') return l.status === 'APPROVED';
+            if (filterVal === 'REJECTED') return l.status === 'REJECTED';
+            if (filterVal === 'CANCELLED') return l.status === 'CANCELLED' || l.status === 'CANCEL_REQUESTED';
+            return true;
+          });
+        }
+
+        list.sort(function(a, b) {
+          return (b.createdAt || '').localeCompare(a.createdAt || '');
+        });
+
+        if (list.length === 0) {
+          container.innerHTML = '<div class="text-xs text-slate-400 py-6 text-center bg-slate-50 rounded-xl">해당 조건의 연차 내역이 없습니다.</div>';
+          return;
+        }
+
+        var html = '';
+        list.forEach(function(l) {
+          var dateTitle = l.applyType === 'SLOT' ? (l.date + ' ' + l.slotTimes) : (l.startDate + ' ~ ' + l.endDate);
+          html += '<div class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">' +
+            '<div class="flex justify-between items-start">' +
+              '<div>' +
+                '<span class="text-xs font-bold text-slate-800">' + dateTitle + '</span>' +
+                '<span class="block text-[11px] text-slate-500 mt-0.5">' + formatDaysAndHours(l.hours) + (l.memo ? (' · ' + l.memo) : '') + '</span>' +
+              '</div>' +
+              getStatusBadge(l.status) +
+            '</div>' +
+            '<div class="pt-2 border-t border-slate-200 text-[11px] text-slate-500 flex items-center justify-between">' +
+              '<span>신청일시: ' + (l.createdAt || '-') + '</span>';
+
+          // Cancellation Action: if approved, allow cancellation request
+          if (l.status === 'APPROVED') {
+            html += '<button type="button" class="btn-request-cancel text-xs text-rose-600 font-bold hover:underline" data-id="' + l.id + '">연차 취소 신청</button>';
+          } else if (l.status === 'REJECTED' && l.rejectReason) {
+            html += '<span class="text-rose-600 font-semibold">반려 사유: ' + l.rejectReason + '</span>';
+          } else if (l.status === 'CANCEL_REQUESTED') {
+            html += '<span class="text-amber-600 font-semibold">취소 결재 진행 중</span>';
+          }
+
+          html += '</div></div>';
+        });
+
+        container.innerHTML = html;
+      }
+
+      // RENDER ADMIN VIEW
+      function renderAdmin() {
+        if (!state.currentUser || state.currentUser.role !== 'admin') {
+          showToast('관리자 권한이 필요합니다.', 'error');
+          switchView('viewHome');
+          return;
+        }
+
+        renderAdminStaffTab();
+        renderAdminHolidaysTab();
+        renderAdminAuditTab();
+      }
+
+      function renderAdminStaffTab() {
+        var staffList = document.getElementById('adminStaffList');
+        var targetSelect = document.getElementById('adjustTargetUser');
+        if (!staffList) return;
+
+        var html = '';
+        var selectHtml = '';
+
+        state.users.forEach(function(u) {
+          var bal = getEmployeeLeaveBalance(u.id, CURRENT_YEAR);
+          var isSelf = state.currentUser && state.currentUser.id === u.id;
+
+          html += '<div class="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2">' +
+            '<div class="flex justify-between items-start">' +
+              '<div>' +
+                '<div class="flex items-center space-x-1.5">' +
+                  '<span class="text-sm font-bold text-slate-800">' + u.name + '</span>' +
+                  '<span class="text-xs text-slate-500">' + u.position + '</span>' +
+                  '<span class="text-[10px] px-1.5 py-0.2 rounded font-semibold ' + (u.role === 'admin' ? 'bg-blue-100 text-blue-800' : (u.role === 'ceo' ? 'bg-purple-100 text-purple-800' : 'bg-slate-200 text-slate-700')) + '">' +
+                    (u.role === 'admin' ? '관리자' : (u.role === 'ceo' ? '대표' : '직원')) +
+                  '</span>' +
+                  (u.status === 'INACTIVE' ? '<span class="text-[10px] px-1.5 py-0.2 rounded font-bold bg-rose-100 text-rose-700">비활성화됨</span>' : '') +
+                '</div>' +
+                '<span class="text-xs text-slate-500 block mt-0.5">아이디: ' + u.username + ' · 입사일: ' + u.hireDate + '</span>' +
+              '</div>' +
+              '<div class="text-right">' +
+                '<span class="text-xs font-black text-brand-700 block">' + (bal.isUnlimited ? '무제한' : (bal.remainingDays + '일 (' + bal.remainingHours + 'h)')) + '</span>' +
+                '<span class="text-[10px] text-slate-400">' + (bal.isUnlimited ? ('사용 ' + bal.usedDays + '일 (대표 연차 무제한)') : ('발생 ' + bal.accruedDays + '일 / 사용 ' + bal.usedDays + '일')) + '</span>' +
+              '</div>' +
+            '</div>' +
+            '<div class="flex items-center justify-between pt-2 border-t border-slate-200">' +
+              '<div class="flex items-center space-x-2">' +
+                '<button type="button" class="btn-edit-user text-xs text-brand-600 font-semibold hover:underline" data-id="' + u.id + '">입사일/수정</button>' +
+                '<span class="text-slate-300">|</span>' +
+                (!isSelf ? '<button type="button" class="btn-change-role text-xs text-purple-600 font-bold hover:underline" data-id="' + u.id + '">권한 변경</button><span class="text-slate-300">|</span>' : '') +
+                '<button type="button" class="btn-reset-user-pw text-xs text-slate-600 font-semibold hover:underline" data-id="' + u.id + '">임시PW</button>' +
+              '</div>' +
+              '<div>' +
+                (!isSelf ? (u.status === 'INACTIVE' ? 
+                  '<button type="button" class="btn-reactivate-user text-xs text-emerald-600 font-bold hover:underline mr-2" data-id="' + u.id + '">재활성화</button>' +
+                  '<button type="button" class="btn-perm-delete-user text-xs text-rose-600 font-bold hover:underline" data-id="' + u.id + '">영구삭제</button>' :
+                  '<button type="button" class="btn-delete-user text-xs text-rose-500 hover:text-rose-700 font-semibold hover:underline" data-id="' + u.id + '">계정 비활성화/삭제</button>') : '') +
+              '</div>' +
+            '</div>' +
+          '</div>';
+
+          selectHtml += '<option value="' + u.id + '">' + u.name + (u.role === 'ceo' ? ' (대표 · 연차 무제한)' : (' (현재 잔여 ' + bal.remainingDays + '일)')) + '</option>';
+        });
+
+        staffList.innerHTML = html;
+        if (targetSelect) targetSelect.innerHTML = selectHtml;
+      }
+
+      function renderAdminHolidaysTab() {
+        var list = document.getElementById('adminHolidayList');
+        if (!list) return;
+
+        var html = '';
+        state.holidays.forEach(function(h, idx) {
+          html += '<div class="p-2 bg-slate-50 border border-slate-200 rounded-lg flex items-center justify-between text-xs">' +
+            '<div class="flex items-center space-x-2">' +
+              '<span class="font-bold text-slate-700">' + h.date + '</span>' +
+              '<span class="text-slate-600">' + h.name + '</span>' +
+            '</div>' +
+            '<button type="button" class="btn-del-holiday text-rose-500 hover:text-rose-700 font-bold px-1.5 py-0.5" data-idx="' + idx + '">삭제</button>' +
+          '</div>';
+        });
+        list.innerHTML = html;
+      }
+
+      function renderAdminAuditTab() {
+        var list = document.getElementById('adminAuditLogList');
+        if (!list) return;
+
+        if (state.auditLogs.length === 0) {
+          list.innerHTML = '<div class="text-xs text-slate-400 py-4 text-center">감사 로그가 비어 있습니다.</div>';
+          return;
+        }
+
+        var html = '';
+        state.auditLogs.slice(0, 15).forEach(function(log) {
+          html += '<div class="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1">' +
+            '<div class="flex justify-between items-center text-[10px] text-slate-400">' +
+              '<span>' + log.timestamp + '</span>' +
+              '<span class="font-bold text-slate-600">' + log.operator + '</span>' +
+            '</div>' +
+            '<div class="text-xs font-bold text-slate-800">' + log.action + '</div>' +
+            '<div class="text-[11px] text-slate-600">' + log.details + '</div>' +
+          '</div>';
+        });
+        list.innerHTML = html;
+      }
+
+      // -------------------------------------------------------------
+      // 7. MODALS, TOASTS & DIALOGS (Sandbox safe, no alert/confirm)
+      // -------------------------------------------------------------
+      function showToast(message, type) {
+        var toast = document.getElementById('toast');
+        var toastMsg = document.getElementById('toastMsg');
+        var toastIcon = document.getElementById('toastIcon');
+        var toastBox = document.getElementById('toastBox');
+
+        if (!toast) return;
+        toastMsg.textContent = message;
+
+        if (type === 'error') {
+          toastBox.className = 'bg-rose-900/90 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg backdrop-blur flex items-center space-x-2';
+          toastIcon.textContent = '✕';
+        } else {
+          toastBox.className = 'bg-slate-900/90 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg backdrop-blur flex items-center space-x-2';
+          toastIcon.textContent = '✓';
+        }
+
+        toast.classList.remove('opacity-0', '-translate-y-2');
+        toast.classList.add('opacity-100', 'translate-y-0');
+
+        setTimeout(function() {
+          toast.classList.remove('opacity-100', 'translate-y-0');
+          toast.classList.add('opacity-0', '-translate-y-2');
+        }, 2500);
+      }
+
+      var modalCallback = null;
+
+      function showActionModal(options) {
+        // options: { title, desc, needInput, inputLabel, inputPlaceholder, confirmText, cancelText, onConfirm }
+        var modal = document.getElementById('actionModal');
+        var title = document.getElementById('modalTitle');
+        var desc = document.getElementById('modalDesc');
+        var inputArea = document.getElementById('modalInputArea');
+        var input = document.getElementById('modalInput');
+        var inputLabel = document.getElementById('modalInputLabel');
+        var confirmBtn = document.getElementById('modalConfirmBtn');
+        var cancelBtn = document.getElementById('modalCancelBtn');
+
+        title.textContent = options.title || '확인';
+        desc.textContent = options.desc || '';
+        confirmBtn.textContent = options.confirmText || '확인';
+        cancelBtn.textContent = options.cancelText || '취소';
+
+        if (options.needInput) {
+          inputArea.classList.remove('hidden');
+          inputLabel.textContent = options.inputLabel || '사유';
+          input.placeholder = options.inputPlaceholder || '사유를 입력해 주세요.';
+          input.value = '';
+        } else {
+          inputArea.classList.add('hidden');
+        }
+
+        modalCallback = options.onConfirm;
+        modal.classList.remove('hidden');
+      }
+
+      function hideActionModal() {
+        var modal = document.getElementById('actionModal');
+        modal.classList.add('hidden');
+        modalCallback = null;
+      }
+
+      // -------------------------------------------------------------
+      // 8. EVENT HANDLERS & INTERACTIONS
+      // -------------------------------------------------------------
+      function setupEventListeners() {
+        
+        // Bottom Nav tabs
+        document.querySelectorAll('.nav-tab-btn').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var view = btn.getAttribute('data-view');
+            if (view) switchView(view);
+          });
+        });
+
+        // Quick Apply button from Home
+        var quickApplyBtn = document.getElementById('quickApplyBtnFromHome');
+        if (quickApplyBtn) {
+          quickApplyBtn.addEventListener('click', function() {
+            switchView('viewApply');
+          });
+        }
+
+        // Links from Home to other views
+        var goToCalendar = document.getElementById('goToCalendarFromHomeBtn');
+        if (goToCalendar) {
+          goToCalendar.addEventListener('click', function() {
+            switchView('viewCalendar');
+          });
+        }
+        var goToHistory = document.getElementById('goToHistoryFromHomeBtn');
+        if (goToHistory) {
+          goToHistory.addEventListener('click', function() {
+            switchView('viewHistory');
+          });
+        }
+
+        // User Switcher Modal open/close
+        var userSwitchBtn = document.getElementById('userSwitchBtn');
+        var quickUserModal = document.getElementById('quickUserModal');
+        var closeUserModalBtn = document.getElementById('closeUserModalBtn');
+
+        if (userSwitchBtn && quickUserModal) {
+          userSwitchBtn.addEventListener('click', function() {
+            renderUserSwitchList();
+            quickUserModal.classList.remove('hidden');
+          });
+        }
+        if (closeUserModalBtn && quickUserModal) {
+          closeUserModalBtn.addEventListener('click', function() {
+            quickUserModal.classList.add('hidden');
+          });
+        }
+
+        // Nav to login / signup from modal
+        var navToLoginBtn = document.getElementById('navToLoginBtn');
+        if (navToLoginBtn) {
+          navToLoginBtn.addEventListener('click', function() {
+            quickUserModal.classList.add('hidden');
+            switchView('viewAuth');
+            showLoginCard();
+          });
+        }
+        var navToSignupBtn = document.getElementById('navToSignupBtn');
+        if (navToSignupBtn) {
+          navToSignupBtn.addEventListener('click', function() {
+            quickUserModal.classList.add('hidden');
+            switchView('viewAuth');
+            showSignupCard();
+          });
+        }
+
+        // Modal Confirm & Cancel
+        var modalConfirmBtn = document.getElementById('modalConfirmBtn');
+        var modalCancelBtn = document.getElementById('modalCancelBtn');
+        if (modalConfirmBtn) {
+          modalConfirmBtn.addEventListener('click', function() {
+            var inputVal = document.getElementById('modalInput').value;
+            if (modalCallback) {
+              modalCallback(inputVal);
+            }
+            hideActionModal();
+          });
+        }
+        if (modalCancelBtn) {
+          modalCancelBtn.addEventListener('click', function() {
+            hideActionModal();
+          });
+        }
+
+        // Test Guide Toggle
+        var toggleTestBtn = document.getElementById('toggleTestGuideBtn');
+        var testContent = document.getElementById('testGuideContent');
+        var testArrow = document.getElementById('testGuideArrow');
+        if (toggleTestBtn && testContent) {
+          toggleTestBtn.addEventListener('click', function() {
+            var isHidden = testContent.classList.contains('hidden');
+            if (isHidden) {
+              testContent.classList.remove('hidden');
+              testArrow.classList.add('rotate-180');
+            } else {
+              testContent.classList.add('hidden');
+              testArrow.classList.remove('rotate-180');
+            }
+          });
+        }
+
+        // Calendar Month Navigation
+        var prevMonthBtn = document.getElementById('calPrevMonthBtn');
+        var nextMonthBtn = document.getElementById('calNextMonthBtn');
+        var todayBtn = document.getElementById('calTodayBtn');
+
+        if (prevMonthBtn) {
+          prevMonthBtn.addEventListener('click', function() {
+            state.calendarDate.setMonth(state.calendarDate.getMonth() - 1);
+            renderCalendar();
+          });
+        }
+        if (nextMonthBtn) {
+          nextMonthBtn.addEventListener('click', function() {
+            state.calendarDate.setMonth(state.calendarDate.getMonth() + 1);
+            renderCalendar();
+          });
+        }
+        if (todayBtn) {
+          todayBtn.addEventListener('click', function() {
+            state.calendarDate = new Date(2026, 10, 4); // 2026-11-04
+            state.selectedCalendarDateStr = '2026-11-04';
+            renderCalendar();
+          });
+        }
+
+        // Calendar Day Click Event Delegation
+        var calGrid = document.getElementById('calendarGrid');
+        if (calGrid) {
+          calGrid.addEventListener('click', function(e) {
+            var cell = e.target.closest('.cal-day-cell');
+            if (cell) {
+              var dateStr = cell.getAttribute('data-date');
+              if (dateStr) {
+                state.selectedCalendarDateStr = dateStr;
+                renderCalendar();
+              }
+            }
+          });
+        }
+
+        // Leave Apply Form Type Selector (2h Slot vs Full/Range)
+        var typeSlotBtn = document.getElementById('typeSlotBtn');
+        var typeFullBtn = document.getElementById('typeFullBtn');
+        var singleDateGroup = document.getElementById('singleDateGroup');
+        var rangeDateGroup = document.getElementById('rangeDateGroup');
+        var timeSlotsGroup = document.getElementById('timeSlotsGroup');
+
+        if (typeSlotBtn && typeFullBtn) {
+          typeSlotBtn.addEventListener('click', function() {
+            state.applyMode = 'SLOT';
+            typeSlotBtn.className = 'py-2.5 px-3 rounded-xl border-2 text-xs font-bold text-center transition flex items-center justify-center space-x-1.5 border-brand-600 bg-brand-50 text-brand-700';
+            typeFullBtn.className = 'py-2.5 px-3 rounded-xl border-2 text-xs font-bold text-center transition flex items-center justify-center space-x-1.5 border-slate-200 bg-white text-slate-600 hover:bg-slate-50';
+            singleDateGroup.classList.remove('hidden');
+            timeSlotsGroup.classList.remove('hidden');
+            rangeDateGroup.classList.add('hidden');
+            recalculateApplyPreview();
+          });
+
+          typeFullBtn.addEventListener('click', function() {
+            state.applyMode = 'FULL_RANGE';
+            typeFullBtn.className = 'py-2.5 px-3 rounded-xl border-2 text-xs font-bold text-center transition flex items-center justify-center space-x-1.5 border-brand-600 bg-brand-50 text-brand-700';
+            typeSlotBtn.className = 'py-2.5 px-3 rounded-xl border-2 text-xs font-bold text-center transition flex items-center justify-center space-x-1.5 border-slate-200 bg-white text-slate-600 hover:bg-slate-50';
+            singleDateGroup.classList.add('hidden');
+            timeSlotsGroup.classList.add('hidden');
+            rangeDateGroup.classList.remove('hidden');
+            recalculateApplyPreview();
+          });
+        }
+
+        // Slot buttons click
+        document.querySelectorAll('.slot-btn').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var slotId = btn.getAttribute('data-slot');
+            var idx = state.selectedSlots.indexOf(slotId);
+            if (idx === -1) {
+              state.selectedSlots.push(slotId);
+              btn.classList.add('selected');
+            } else {
+              state.selectedSlots.splice(idx, 1);
+              btn.classList.remove('selected');
+            }
+            recalculateApplyPreview();
+          });
+        });
+
+        // Select All Slots (8h / 1 Full Day)
+        var selectAllSlots = document.getElementById('selectAllSlotsBtn');
+        if (selectAllSlots) {
+          selectAllSlots.addEventListener('click', function() {
+            state.selectedSlots = ['1', '2', '3', '4'];
+            document.querySelectorAll('.slot-btn').forEach(function(b) {
+              b.classList.add('selected');
+            });
+            recalculateApplyPreview();
+          });
+        }
+
+        // Apply Date Change Events
+        var singleDateInput = document.getElementById('applySingleDate');
+        var startDateInput = document.getElementById('applyStartDate');
+        var endDateInput = document.getElementById('applyEndDate');
+
+        if (singleDateInput) {
+          singleDateInput.addEventListener('change', recalculateApplyPreview);
+        }
+        if (startDateInput) {
+          startDateInput.addEventListener('change', recalculateApplyPreview);
+        }
+        if (endDateInput) {
+          endDateInput.addEventListener('change', recalculateApplyPreview);
+        }
+
+        // Submit Leave Application
+        var leaveForm = document.getElementById('leaveApplyForm');
+        if (leaveForm) {
+          leaveForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            handleLeaveSubmission();
+          });
+        }
+
+        // History Filter
+        var histFilter = document.getElementById('historyFilterSelect');
+        if (histFilter) {
+          histFilter.addEventListener('change', renderHistory);
+        }
+
+        // Cancellation Request Event Delegation in History
+        var histContainer = document.getElementById('historyListContainer');
+        if (histContainer) {
+          histContainer.addEventListener('click', function(e) {
+            var btn = e.target.closest('.btn-request-cancel');
+            if (btn) {
+              var leaveId = btn.getAttribute('data-id');
+              handleLeaveCancelRequest(leaveId);
+            }
+          });
+        }
+
+        // Approvals (1st Approval by Kim Namheung)
+        var pending1stContainer = document.getElementById('list1stPendingApprovals');
+        if (pending1stContainer) {
+          pending1stContainer.addEventListener('click', function(e) {
+            var approveBtn = e.target.closest('.btn-1st-approve');
+            var rejectBtn = e.target.closest('.btn-1st-reject');
+
+            if (approveBtn) {
+              var id = approveBtn.getAttribute('data-id');
+              handle1stApproval(id, true);
+            } else if (rejectBtn) {
+              var rId = rejectBtn.getAttribute('data-id');
+              handle1stApproval(rId, false);
+            }
+          });
+        }
+
+        // Approvals (Final Approval by CEO)
+        var ceoPendingContainer = document.getElementById('listCeoPendingApprovals');
+        if (ceoPendingContainer) {
+          ceoPendingContainer.addEventListener('click', function(e) {
+            var approveBtn = e.target.closest('.btn-ceo-approve');
+            var rejectBtn = e.target.closest('.btn-ceo-reject');
+
+            if (approveBtn) {
+              var id = approveBtn.getAttribute('data-id');
+              handleCeoApproval(id, true);
+            } else if (rejectBtn) {
+              var rId = rejectBtn.getAttribute('data-id');
+              handleCeoApproval(rId, false);
+            }
+          });
+        }
+
+        // User Signup Approval from Admin home
+        var signupContainer = document.getElementById('listSignupPendingUsers');
+        if (signupContainer) {
+          signupContainer.addEventListener('click', function(e) {
+            var btn = e.target.closest('.btn-approve-user');
+            if (btn) {
+              var uid = btn.getAttribute('data-id');
+              handleApproveSignup(uid);
+            }
+          });
+        }
+
+        // Admin Sub-tabs
+        document.querySelectorAll('.admin-tab-btn').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var tabId = btn.getAttribute('data-tab');
+            switchAdminTab(tabId);
+          });
+        });
+
+        // Admin Staff List Actions (Edit Hire Date, Reset PW)
+        var adminStaffList = document.getElementById('adminStaffList');
+        if (adminStaffList) {
+          adminStaffList.addEventListener('click', function(e) {
+            var editBtn = e.target.closest('.btn-edit-user');
+            var pwBtn = e.target.closest('.btn-reset-user-pw');
+            if (editBtn) {
+              handleEditUserHireDate(editBtn.getAttribute('data-id'));
+            } else if (e.target.closest('.btn-change-role')) {
+              handleChangeUserRole(e.target.closest('.btn-change-role').getAttribute('data-id'));
+            } else if (pwBtn) {
+              handleAdminResetUserPassword(pwBtn.getAttribute('data-id'));
+            } else if (e.target.closest('.btn-delete-user')) {
+              handleDeleteOrDeactivateUser(e.target.closest('.btn-delete-user').getAttribute('data-id'));
+            } else if (e.target.closest('.btn-reactivate-user')) {
+              handleReactivateUser(e.target.closest('.btn-reactivate-user').getAttribute('data-id'));
+            } else if (e.target.closest('.btn-perm-delete-user')) {
+              handlePermanentDeleteUser(e.target.closest('.btn-perm-delete-user').getAttribute('data-id'));
+            }
+          });
+        }
+
+        // Admin Manual Adjust Form
+        var adjustForm = document.getElementById('adminAdjustForm');
+        if (adjustForm) {
+          adjustForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            handleManualAdjust();
+          });
+        }
+
+        // Admin Add Holiday Form
+        var holidayForm = document.getElementById('addHolidayForm');
+        if (holidayForm) {
+          holidayForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            handleAddHoliday();
+          });
+        }
+
+        // Admin Delete Holiday
+        var adminHolidayList = document.getElementById('adminHolidayList');
+        if (adminHolidayList) {
+          adminHolidayList.addEventListener('click', function(e) {
+            var btn = e.target.closest('.btn-del-holiday');
+            if (btn) {
+              var idx = parseInt(btn.getAttribute('data-idx'), 10);
+              handleDeleteHoliday(idx);
+            }
+          });
+        }
+
+        // Admin CSV Download
+        var csvBtn = document.getElementById('downloadCsvBtn');
+        if (csvBtn) {
+          csvBtn.addEventListener('click', downloadCsvReport);
+        }
+
+        // Admin Backup JSON
+        var backupBtn = document.getElementById('backupJsonBtn');
+        if (backupBtn) {
+          backupBtn.addEventListener('click', backupDatabaseJson);
+        }
+
+        // Admin Reset Demo Data
+        var resetBtn = document.getElementById('resetDemoDataBtn');
+        if (resetBtn) {
+          resetBtn.addEventListener('click', function() {
+            showActionModal({
+              title: '초기 테스트 데이터 리셋',
+              desc: '고수현(16일), 김남흥(17일) 등의 초기 시뮬레이션 상태로 리셋하시겠습니까?',
+              confirmText: '리셋',
+              onConfirm: function() {
+                resetToDefaultDatabase();
+                showToast('초기 데이터로 리셋되었습니다.', 'success');
+                renderHome();
+              }
+            });
+          });
+        }
+
+        // Auth Form Handlers (Init Admin / Login / Signup)
+        var initAdminForm = document.getElementById('authInitAdminForm');
+        if (initAdminForm) {
+          initAdminForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            handleInitAdminSubmit();
+          });
+        }
+
+        var toggleGeneralLogin = document.getElementById('toggleGeneralLoginBtn');
+        if (toggleGeneralLogin) {
+          toggleGeneralLogin.addEventListener('click', showLoginCard);
+        }
+
+        var backToInitAdmin = document.getElementById('backToInitAdminBtn');
+        if (backToInitAdmin) {
+          backToInitAdmin.addEventListener('click', showInitAdminCard);
+        }
+
+
+        // Auth Form Handlers (Login / Signup)
+        var loginForm = document.getElementById('authLoginForm');
+        if (loginForm) {
+          loginForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            handleLoginSubmit();
+          });
+        }
+
+        var signupForm = document.getElementById('authSignupForm');
+        if (signupForm) {
+          signupForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            handleSignupSubmit();
+          });
+        }
+
+        var showSignupBtn = document.getElementById('showSignupCardBtn');
+
+        // Auto-sync admin name to username if user changes name
+        var initAdminName = document.getElementById('initAdminName');
+        var initAdminUsername = document.getElementById('initAdminUsername');
+        if (initAdminName && initAdminUsername) {
+          initAdminName.addEventListener('input', function() {
+            initAdminUsername.value = initAdminName.value.trim();
+          });
+        }
+
+        // Auto-sync signup name to username button
+        var copyNameToUsernameBtn = document.getElementById('copyNameToUsernameBtn');
+        var signupName = document.getElementById('signupName');
+        var signupUsername = document.getElementById('signupUsername');
+        if (copyNameToUsernameBtn && signupName && signupUsername) {
+          copyNameToUsernameBtn.addEventListener('click', function() {
+            var val = signupName.value.trim();
+            if (val) {
+              signupUsername.value = val;
+            } else {
+              showToast('성명을 먼저 입력해 주세요.', 'error');
+            }
+          });
+        }
+
+        var backToLogin = document.getElementById('backToLoginBtn');
+        if (showSignupBtn) showSignupBtn.addEventListener('click', showSignupCard);
+        if (backToLogin) backToLogin.addEventListener('click', showLoginCard);
+
+        // Password Reset Request
+        var pwResetBtn = document.getElementById('requestPwResetBtn');
+        if (pwResetBtn) {
+          pwResetBtn.addEventListener('click', function() {
+            showActionModal({
+              title: '비밀번호 재설정 문의',
+              desc: '사내 보안 규정에 따라 비밀번호 분실 시 관리자(김남흥 차장)에게 초기화 요청이 전달됩니다. 아이디를 입력해 주세요.',
+              needInput: true,
+              inputLabel: '사내 아이디',
+              inputPlaceholder: '아이디를 입력하세요',
+              confirmText: '초기화 요청 접수',
+              onConfirm: function(val) {
+                if (!val) {
+                  showToast('아이디를 입력해 주세요.', 'error');
+                  return;
+                }
+                addAuditLog('비밀번호 초기화 요청', '아이디: ' + val + ' 에 대한 초기화 요청 접수됨');
+                showToast('관리자에게 비밀번호 초기화 요청이 전송되었습니다.', 'success');
+              }
+            });
+          });
+        }
+
+        // Quick login buttons
+        document.querySelectorAll('.quick-login-btn').forEach(function(b) {
+          b.addEventListener('click', function() {
+            var username = b.getAttribute('data-user');
+            var u = state.users.find(function(user) { return user.username === username; });
+            if (u) {
+              state.currentUser = u;
+              showToast(u.name + ' ' + u.position + '님으로 로그인되었습니다.', 'success');
+              switchView('viewHome');
+            }
+          });
+        });
+      }
+
+      // -------------------------------------------------------------
+      // 9. CORE BUSINESS LOGIC FUNCTIONS
+      // -------------------------------------------------------------
+      function renderUserSwitchList() {
+        var container = document.getElementById('userSwitchList');
+        if (!container) return;
+
+        var html = '';
+        var hasAdmin = state.users.some(function(u) { return u.role === 'admin' && u.status === 'ACTIVE'; });
+        if (!hasAdmin) {
+          html += '<div class="p-3 bg-amber-50 border border-amber-300 rounded-xl mb-2 flex items-center justify-between">' +
+            '<div>' +
+              '<span class="text-xs font-bold text-amber-900 block">관리자 계정 미등록</span>' +
+              '<span class="text-[11px] text-amber-700">관리자(김남흥 차장)로 직접 가입하세요.</span>' +
+            '</div>' +
+            '<button type="button" class="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg" onclick="window.goToAdminSignup()">' +
+              '가입하기' +
+            '</button>' +
+          '</div>';
+        }
+
+        state.users.forEach(function(u) {
+          if (u.status !== 'ACTIVE') return;
+          var isCurrent = state.currentUser && state.currentUser.id === u.id;
+          var bal = getEmployeeLeaveBalance(u.id, CURRENT_YEAR);
+
+          html += '<button type="button" class="w-full text-left p-2.5 rounded-xl border ' + (isCurrent ? 'border-brand-600 bg-brand-50' : 'border-slate-200 bg-white hover:bg-slate-50') + ' transition flex items-center justify-between" onclick="window.switchCurrentUser(\'' + u.id + '\')">' +
+            '<div class="flex items-center space-x-2.5">' +
+              '<div class="w-8 h-8 rounded-full ' + (isCurrent ? 'bg-brand-600 text-white' : 'bg-slate-200 text-slate-700') + ' flex items-center justify-center font-bold text-xs">' +
+                u.name.charAt(0) +
+              '</div>' +
+              '<div>' +
+                '<div class="flex items-center space-x-1.5">' +
+                  '<span class="text-xs font-bold text-slate-800">' + u.name + ' ' + u.position + '</span>' +
+                  '<span class="text-[10px] text-slate-500 font-medium">' + (u.role === 'admin' ? '관리자·1차결재' : (u.role === 'ceo' ? '최종결재자' : '일반직원')) + '</span>' +
+                '</div>' +
+                '<span class="text-[10px] text-slate-400">잔여: ' + (bal.isUnlimited ? '무제한' : (bal.remainingDays + '일 (' + bal.remainingHours + 'h)')) + '</span>' +
+              '</div>' +
+            '</div>' +
+            (isCurrent ? '<span class="text-xs font-bold text-brand-600">선택됨</span>' : '') +
+          '</button>';
+        });
+
+        container.innerHTML = html;
+      }
+
+      window.goToAdminSignup = function() {
+        document.getElementById('quickUserModal').classList.add('hidden');
+        switchView('viewAuth');
+        showInitAdminCard();
+      };
+
+      window.switchCurrentUser = function(userId) {
+        var u = state.users.find(function(user) { return user.id === userId; });
+        if (u) {
+          state.currentUser = u;
+          document.getElementById('quickUserModal').classList.add('hidden');
+          showToast(u.name + ' ' + u.position + ' 계정으로 전환되었습니다.', 'success');
+          renderHome();
+        }
+      };
+
+      // LEAVE APPLICATION SUBMISSION
+      function handleLeaveSubmission() {
+        var user = state.currentUser;
+        if (!user) return;
+
+        var bal = getEmployeeLeaveBalance(user.id, CURRENT_YEAR);
+        var totalHours = 0;
+        var totalDays = 0;
+        var dateTitle = '';
+        var singleDate = document.getElementById('applySingleDate').value;
+        var startDate = document.getElementById('applyStartDate').value;
+        var endDate = document.getElementById('applyEndDate').value;
+        var memo = document.getElementById('applyMemo').value.trim();
+
+        if (state.applyMode === 'SLOT') {
+          if (!singleDate) {
+            showToast('사용 날짜를 선택해 주세요.', 'error');
+            return;
+          }
+          if (state.selectedSlots.length === 0) {
+            showToast('사용할 2시간 시간 구간을 1개 이상 선택해 주세요.', 'error');
+            return;
+          }
+
+          // Check if singleDate is weekend or holiday
+          var dCheck = isHolidayOrWeekend(new Date(singleDate));
+          if (dCheck.isOff) {
+            showToast('선택하신 날짜는 ' + dCheck.reason + '입니다. 평일 근무시간에만 연차를 신청할 수 있습니다.', 'error');
+            return;
+          }
+
+          state.selectedSlots.forEach(function(sId) {
+            totalHours += TIME_SLOTS[sId].hours;
+          });
+          totalDays = totalHours / WORK_HOURS_PER_DAY;
+
+          // Format slot times string
+          var slotTimesStr = state.selectedSlots.sort().map(function(s) {
+            return TIME_SLOTS[s].time;
+          }).join(', ');
+          dateTitle = singleDate + ' (' + slotTimesStr + ')';
+        } else {
+          if (!startDate || !endDate) {
+            showToast('시작일과 종료일을 모두 선택해 주세요.', 'error');
+            return;
+          }
+          var calc = calculateWorkingDays(startDate, endDate);
+          if (calc.workingDays === 0) {
+            showToast('선택한 기간에 포함된 근무일이 없습니다 (전체 주말 또는 휴무일).', 'error');
+            return;
+          }
+          totalHours = calc.workingHours;
+          totalDays = calc.workingDays;
+          dateTitle = startDate + ' ~ ' + endDate + ' (' + totalDays + '일 연속 연차)';
+        }
+
+        // Balance Check (Bypassed if CEO has unlimited leave)
+        if (!bal.isUnlimited && bal.availableRemainingHours < totalHours) {
+          showToast('잔여 연차가 부족합니다 (신청: ' + totalHours + 'h / 잔여: ' + bal.availableRemainingHours + 'h)', 'error');
+          return;
+        }
+
+        // Determine Initial Approval Status based on user role
+        // Case 1: General staff -> WAITING_FIRST (김남흥 차장 1차 결재 대기)
+        // Case 2: Kim Namheung (차장) -> WAITING_FINAL (스킵하고 대표 최종 결재 대기)
+        // Case 3: CEO -> APPROVED (대표 본인 일정 직접 등록)
+        var initialStatus = 'WAITING_FIRST';
+        var firstApprover = '-';
+        var firstApprovedAt = '-';
+
+        if (user.role === 'admin') {
+          // 차장 본인의 연차는 대표님에게 직접 요청 (1차 승인 스킵) -> Test Requirement 7!
+          initialStatus = 'WAITING_FINAL';
+          firstApprover = '스킵(차장 본인)';
+          firstApprovedAt = formatDateFull(new Date());
+        } else if (user.role === 'ceo') {
+          initialStatus = 'APPROVED';
+          firstApprover = '대표 직접 등록';
+          firstApprovedAt = formatDateFull(new Date());
+        }
+
+        var newLeave = {
+          id: 'leave_' + Date.now(),
+          userId: user.id,
+          userName: user.name,
+          userPosition: user.position,
+          applyType: state.applyMode,
+          date: state.applyMode === 'SLOT' ? singleDate : startDate,
+          startDate: state.applyMode === 'SLOT' ? singleDate : startDate,
+          endDate: state.applyMode === 'SLOT' ? singleDate : endDate,
+          slots: state.applyMode === 'SLOT' ? state.selectedSlots.slice() : [],
+          slotTimes: state.applyMode === 'SLOT' ? (state.selectedSlots.sort().map(function(s) { return TIME_SLOTS[s].time; }).join(', ')) : ('전일 (08:30~17:30)'),
+          hours: totalHours,
+          days: totalDays,
+          memo: memo,
+          status: initialStatus,
+          firstApprover: firstApprover,
+          firstApprovedAt: firstApprovedAt,
+          finalApprover: user.role === 'ceo' ? '대표 직접 등록' : '-',
+          finalApprovedAt: user.role === 'ceo' ? formatDateFull(new Date()) : '-',
+          createdAt: formatDateFull(new Date())
+        };
+
+        state.leaves.unshift(newLeave);
+        saveDatabase();
+
+        addAuditLog(
+          '연차 신청 접수',
+          user.name + ' ' + userPositionText(user) + ' - ' + dateTitle + ' (' + formatDaysAndHours(totalHours) + ') [' + (initialStatus === 'WAITING_FINAL' ? '대표 결재 직행' : '1차 결재 대기') + ']'
+        );
+
+        showToast('연차 신청이 성공적으로 제출되었습니다.', 'success');
+
+        // Reset inputs
+        state.selectedSlots = [];
+        document.querySelectorAll('.slot-btn').forEach(function(b) { b.classList.remove('selected'); });
+        document.getElementById('applyMemo').value = '';
+
+        // Navigate to History or Home
+        switchView('viewHistory');
+      }
+
+      function userPositionText(user) {
+        return user.position || '';
+      }
+
+      // 1ST APPROVAL (BY MANAGER KIM NAMHEUNG)
+      function handle1stApproval(leaveId, isApprove) {
+        var leave = state.leaves.find(function(l) { return l.id === leaveId; });
+        if (!leave) return;
+
+        if (isApprove) {
+          showActionModal({
+            title: '1차 승인 처리',
+            desc: leave.userName + '님의 연차 (' + formatDaysAndHours(leave.hours) + ')를 1차 승인하시겠습니까? 승인 시 대표님 최종 결재함으로 전달됩니다.',
+            confirmText: '1차 승인',
+            onConfirm: function() {
+              leave.status = 'WAITING_FINAL';
+              leave.firstApprover = state.currentUser.name + ' ' + state.currentUser.position;
+              leave.firstApprovedAt = formatDateFull(new Date());
+              saveDatabase();
+              addAuditLog('1차 승인 완료', leave.userName + ' 연차 1차 승인 -> 대표 최종 결재 대기');
+              showToast('1차 승인이 완료되었습니다. 대표님 결재 대기함으로 이동했습니다.', 'success');
+              renderHome();
+            }
+          });
+        } else {
+          showActionModal({
+            title: '1차 결재 반려',
+            desc: leave.userName + '님의 연차 신청을 반려하시겠습니까? 사유를 입력해 주세요.',
+            needInput: true,
+            inputLabel: '반려 사유 (필수)',
+            inputPlaceholder: '예: 당일 긴급 프로젝트 배포 일정으로 인한 조정 요청',
+            confirmText: '반려 처리',
+            onConfirm: function(reason) {
+              if (!reason) {
+                showToast('반려 사유를 입력해야 합니다.', 'error');
+                return;
+              }
+              leave.status = 'REJECTED';
+              leave.rejectReason = reason;
+              leave.firstApprover = state.currentUser.name + ' ' + state.currentUser.position;
+              leave.firstApprovedAt = formatDateFull(new Date());
+              saveDatabase();
+              addAuditLog('1차 반려', leave.userName + ' 연차 반려 (사유: ' + reason + ')');
+              showToast('연차 신청이 반려되었습니다.', 'error');
+              renderHome();
+            }
+          });
+        }
+      }
+
+      // FINAL APPROVAL (BY CEO)
+      function handleCeoApproval(leaveId, isApprove) {
+        var leave = state.leaves.find(function(l) { return l.id === leaveId; });
+        if (!leave) return;
+
+        if (isApprove) {
+          showActionModal({
+            title: '최종 결재 승인',
+            desc: leave.userName + '님의 연차 (' + formatDaysAndHours(leave.hours) + ')를 최종 승인하시겠습니까? 최종 승인 시 연차가 확정 차감되고 공유 달력에 즉시 반영됩니다.',
+            confirmText: '최종 승인 (확정)',
+            onConfirm: function() {
+              leave.status = 'APPROVED';
+              leave.finalApprover = state.currentUser.name + ' ' + state.currentUser.position;
+              leave.finalApprovedAt = formatDateFull(new Date());
+              saveDatabase();
+              addAuditLog('최종 승인 확정', leave.userName + ' 연차 최종 확정 (' + formatDaysAndHours(leave.hours) + ') 공유달력 반영');
+              showToast('최종 승인되었습니다! 연차가 확정되어 공유 달력에 반영되었습니다.', 'success');
+              renderHome();
+            }
+          });
+        } else {
+          showActionModal({
+            title: '최종 결재 반려',
+            desc: leave.userName + '님의 연차 신청을 최종 반려하시겠습니까? 사유를 입력해 주세요.',
+            needInput: true,
+            inputLabel: '반려 사유',
+            inputPlaceholder: '반려 사유 입력',
+            confirmText: '반려 처리',
+            onConfirm: function(reason) {
+              leave.status = 'REJECTED';
+              leave.rejectReason = reason || '대표 최종 반려';
+              leave.finalApprover = state.currentUser.name + ' ' + state.currentUser.position;
+              leave.finalApprovedAt = formatDateFull(new Date());
+              saveDatabase();
+              addAuditLog('최종 반려', leave.userName + ' 연차 최종 반려 (사유: ' + (reason || '-') + ')');
+              showToast('최종 반려 처리되었습니다.', 'error');
+              renderHome();
+            }
+          });
+        }
+      }
+
+      // CANCEL REQUEST & APPROVAL WORKFLOW
+      function handleLeaveCancelRequest(leaveId) {
+        var leave = state.leaves.find(function(l) { return l.id === leaveId; });
+        if (!leave) return;
+
+        showActionModal({
+          title: '연차 취소 신청',
+          desc: '이미 최종 승인된 연차를 취소하시겠습니까? 관리자 또는 결재자의 승인 후 잔여 연차가 복원됩니다.',
+          needInput: true,
+          inputLabel: '취소 사유',
+          inputPlaceholder: '예: 일정 변경으로 인한 연차 취소 요청',
+          confirmText: '취소 신청',
+          onConfirm: function(reason) {
+            leave.status = 'CANCEL_REQUESTED';
+            leave.cancelReason = reason || '직원 직접 취소 요청';
+            saveDatabase();
+            addAuditLog('연차 취소 신청', leave.userName + ' 연차 취소 신청 (' + formatDaysAndHours(leave.hours) + ')');
+            showToast('연차 취소 신청이 접수되었습니다.', 'success');
+            renderHistory();
+          }
+        });
+      }
+
+      // SIGNUP APPROVAL BY ADMIN (Zero text input: 1-click role selection)
+      function handleApproveSignup(userId) {
+        var user = state.users.find(function(u) { return u.id === userId; });
+        if (!user) return;
+
+        showActionModal({
+          title: user.name + ' 가입 승인',
+          desc: user.name + ' 님의 사내 역할을 선택해 주세요. 별도의 직급 입력 없이 권한만 지정하여 즉시 활성화합니다.',
+          confirmText: '일반 직원으로 승인',
+          cancelText: '대표(최종결재자)로 승인',
+          onConfirm: function() {
+            user.status = 'ACTIVE';
+            user.role = 'staff';
+            user.position = '';
+            if (!user.hireDate) user.hireDate = formatDateYMD(new Date());
+            saveDatabase();
+            addAuditLog('신규 직원 승인', user.name + ' (' + user.username + ') 일반 직원 계정 활성화');
+            showToast(user.name + ' 직원의 계정이 활성화되었습니다.', 'success');
+            renderHome();
+          }
+        });
+
+        var cancelBtn = document.getElementById('modalCancelBtn');
+        cancelBtn.onclick = function() {
+          hideActionModal();
+          user.status = 'ACTIVE';
+          user.role = 'ceo';
+          user.position = '';
+          if (!user.hireDate) user.hireDate = formatDateYMD(new Date());
+          saveDatabase();
+          addAuditLog('대표 계정 승인', user.name + ' (' + user.username + ') 대표(최종 결재자) 계정 활성화');
+          showToast(user.name + ' 님이 대표(최종 결재자)로 활성화되었습니다.', 'success');
+          renderHome();
+        };
+      }
+
+      // ADMIN TAB SWITCHER
+      function switchAdminTab(tabKey) {
+        var tabs = ['adminStaff', 'adminLeaveAdjust', 'adminHolidays', 'adminHistory', 'adminData'];
+        tabs.forEach(function(t) {
+          var content = document.getElementById('tabContent_' + t);
+          if (content) {
+            if (t === tabKey) {
+              content.classList.remove('hidden');
+            } else {
+              content.classList.add('hidden');
+            }
+          }
+        });
+
+        document.querySelectorAll('.admin-tab-btn').forEach(function(btn) {
+          if (btn.getAttribute('data-tab') === tabKey) {
+            btn.className = 'admin-tab-btn flex-shrink-0 px-3 py-2 rounded-xl text-xs font-bold bg-brand-600 text-white shadow-xs';
+          } else {
+            btn.className = 'admin-tab-btn flex-shrink-0 px-3 py-2 rounded-xl text-xs font-bold bg-white text-slate-600 border border-slate-200';
+          }
+        });
+      }
+
+      // ADMIN CHANGE USER ROLE (일반 직원 <-> 최종 승인자 대표)
+      function handleChangeUserRole(userId) {
+        var user = state.users.find(function(u) { return u.id === userId; });
+        if (!user) return;
+
+        var isCeo = (user.role === 'ceo');
+        var currentRoleName = isCeo ? '최종 승인자 (대표)' : (user.role === 'admin' ? '시스템 관리자' : '일반 직원');
+
+        showActionModal({
+          title: user.name + ' 권한 변경',
+          desc: '현재 권한: [' + currentRoleName + ']\n' + (isCeo ? '일반 직원으로 변경하시겠습니까?' : '대표(최종 승인자) 권한으로 변경하시겠습니까? 최종 승인자가 되면 직원들의 연차를 최종 승인/반려할 수 있습니다.'),
+          confirmText: isCeo ? '일반 직원으로 변경' : '대표(최종 승인자)로 변경',
+          cancelText: '취소',
+          onConfirm: function() {
+            var newRole = isCeo ? 'staff' : 'ceo';
+            user.role = newRole;
+            saveDatabase();
+            addAuditLog('사용자 권한 변경', user.name + ' (' + user.username + ') 권한 변경: ' + currentRoleName + ' -> ' + (newRole === 'ceo' ? '최종 승인자(대표)' : '일반 직원'));
+            showToast(user.name + ' 님의 권한이 ' + (newRole === 'ceo' ? '최종 승인자(대표)' : '일반 직원') + '(으)로 변경되었습니다.', 'success');
+            renderAdminStaffTab();
+            renderHome();
+          }
+        });
+      }
+
+      // ADMIN EDIT USER HIRE DATE / DETAILS
+      function handleEditUserHireDate(userId) {
+        var user = state.users.find(function(u) { return u.id === userId; });
+        if (!user) return;
+
+        showActionModal({
+          title: user.name + ' 정보 및 입사일 수정',
+          desc: '입사일을 변경하면 2026년 기준 연차 발생량이 자동 재계산됩니다. (현재 입사일: ' + user.hireDate + ')',
+          needInput: true,
+          inputLabel: '새 입사일 (YYYY-MM-DD)',
+          inputPlaceholder: user.hireDate,
+          confirmText: '변경 저장',
+          onConfirm: function(val) {
+            val = val.trim();
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(val)) {
+              showToast('날짜 형식이 올바르지 않습니다. (예: 2023-07-01)', 'error');
+              return;
+            }
+            var prevHire = user.hireDate;
+            user.hireDate = val;
+            saveDatabase();
+
+            var newBal = calculateBaseAnnualLeave(val, CURRENT_YEAR);
+            addAuditLog(
+              '직원 정보 수정',
+              user.name + ' 입사일 변경: ' + prevHire + ' -> ' + val + ' (2026년 자동 발생량: ' + newBal.days + '일 재계산됨)'
+            );
+            showToast(user.name + ' 직원의 입사일이 변경되었습니다. 발생량이 재계산되었습니다.', 'success');
+            renderAdminStaffTab();
+            renderHome();
+          }
+        });
+      }
+
+      // ADMIN DEACTIVATE / DELETE USER
+      function handleDeleteOrDeactivateUser(userId) {
+        var user = state.users.find(function(u) { return u.id === userId; });
+        if (!user) return;
+
+        showActionModal({
+          title: user.name + ' (' + user.username + ') 계정 관리',
+          desc: '퇴사 등으로 로그인을 차단하려면 [비활성화]를, 테스트 계정을 영구 삭제하려면 [영구삭제]를 선택하세요. (기존 연차 및 감사 이력 보존을 위해 비활성화를 권장합니다.)',
+          confirmText: '계정 비활성화 (권장)',
+          cancelText: '영구 삭제',
+          onConfirm: function() {
+            user.status = 'INACTIVE';
+            saveDatabase();
+            addAuditLog('계정 비활성화', user.name + ' (' + user.username + ') 계정 비활성화(퇴사) 처리됨');
+            showToast(user.name + ' 직원의 계정이 비활성화되었습니다. (로그인 차단됨)', 'success');
+            renderAdminStaffTab();
+            renderHome();
+          }
+        });
+
+        // Add special click on cancelBtn for permanent deletion if desired
+        var cancelBtn = document.getElementById('modalCancelBtn');
+        var originalCancel = cancelBtn.onclick;
+        cancelBtn.onclick = function() {
+          hideActionModal();
+          handlePermanentDeleteUser(userId);
+        };
+      }
+
+      function handlePermanentDeleteUser(userId) {
+        var user = state.users.find(function(u) { return u.id === userId; });
+        if (!user) return;
+
+        showActionModal({
+          title: '계정 완전 영구 삭제',
+          desc: user.name + ' (' + user.username + ') 직원의 계정을 시스템에서 영구히 삭제하시겠습니까? 삭제 시 복구할 수 없습니다.',
+          confirmText: '영구 삭제 확인',
+          cancelText: '취소',
+          onConfirm: function() {
+            var idx = state.users.findIndex(function(u) { return u.id === userId; });
+            if (idx !== -1) {
+              state.users.splice(idx, 1);
+              // also delete leaves if permanent delete
+              state.leaves = state.leaves.filter(function(l) { return l.userId !== userId; });
+              saveDatabase();
+              addAuditLog('계정 영구 삭제', user.name + ' (' + user.username + ') 계정 및 데이터 영구 삭제 완료');
+              showToast(user.name + ' 계정이 영구 삭제되었습니다.', 'success');
+              renderAdminStaffTab();
+              renderHome();
+            }
+          }
+        });
+      }
+
+      function handleReactivateUser(userId) {
+        var user = state.users.find(function(u) { return u.id === userId; });
+        if (!user) return;
+
+        user.status = 'ACTIVE';
+        saveDatabase();
+        addAuditLog('계정 재활성화', user.name + ' (' + user.username + ') 계정 재활성화 완료');
+        showToast(user.name + ' 직원의 계정이 다시 활성화되었습니다.', 'success');
+        renderAdminStaffTab();
+        renderHome();
+      }
+
+      // ADMIN ISSUE TEMPORARY PASSWORD
+      function handleAdminResetUserPassword(userId) {
+        var user = state.users.find(function(u) { return u.id === userId; });
+        if (!user) return;
+
+        var tempPw = 'temp' + Math.floor(1000 + Math.random() * 9000) + '!';
+        showActionModal({
+          title: '임시 비밀번호 발급',
+          desc: user.name + ' (' + user.username + ') 직원의 임시 비밀번호를 발급하시겠습니까? 관리자는 기존 비밀번호를 조회할 수 없습니다.',
+          confirmText: '임시 비밀번호 생성',
+          onConfirm: function() {
+            user.passwordHash = 'hash_' + tempPw;
+            saveDatabase();
+            addAuditLog('임시 비밀번호 발급', user.name + ' (' + user.username + ') 임시 비밀번호 생성');
+            showActionModal({
+              title: '발급 완료',
+              desc: user.name + ' 직원의 임시 비밀번호: [' + tempPw + '] 입니다. 직원에게 전달 후 첫 로그인 시 변경하도록 안내하세요.',
+              confirmText: '확인'
+            });
+          }
+        });
+      }
+
+      // ADMIN MANUAL ADJUST LEAVE
+      function handleManualAdjust() {
+        var targetUserId = document.getElementById('adjustTargetUser').value;
+        var type = document.getElementById('adjustType').value; // 'ADD' or 'DEDUCT'
+        var hours = parseInt(document.getElementById('adjustAmount').value, 10);
+        var reason = document.getElementById('adjustReason').value.trim();
+
+        if (!reason) {
+          showToast('조정 사유를 반드시 입력해야 합니다.', 'error');
+          return;
+        }
+
+        var user = state.users.find(function(u) { return u.id === targetUserId; });
+        if (!user) return;
+
+        var balBefore = getEmployeeLeaveBalance(targetUserId, CURRENT_YEAR);
+        var deltaHours = (type === 'ADD') ? hours : -hours;
+
+        state.manualAdjustments.push({
+          id: 'adj_' + Date.now(),
+          userId: targetUserId,
+          year: CURRENT_YEAR,
+          deltaHours: deltaHours,
+          reason: reason,
+          operator: state.currentUser.name + ' ' + state.currentUser.position,
+          createdAt: formatDateFull(new Date())
+        });
+
+        saveDatabase();
+        var balAfter = getEmployeeLeaveBalance(targetUserId, CURRENT_YEAR);
+
+        addAuditLog(
+          '연차 수동 조정',
+          user.name + ' 2026년 연차 ' + (type === 'ADD' ? ('+' + hours + '시간 추가') : ('-' + hours + '시간 차감')) +
+          ' (변경 전: ' + balBefore.remainingHours + 'h -> 변경 후: ' + balAfter.remainingHours + 'h, 사유: ' + reason + ')'
+        );
+
+        showToast('연차 수동 조정이 기록 및 반영되었습니다.', 'success');
+        document.getElementById('adjustReason').value = '';
+        renderAdmin();
+        renderHome();
+      }
+
+      // ADMIN HOLIDAY ADD / DELETE
+      function handleAddHoliday() {
+        var date = document.getElementById('newHolidayDate').value;
+        var name = document.getElementById('newHolidayName').value.trim();
+
+        if (!date || !name) {
+          showToast('휴무일 날짜와 명칭을 모두 입력해 주세요.', 'error');
+          return;
+        }
+
+        state.holidays.push({ date: date, name: name });
+        // sort by date
+        state.holidays.sort(function(a, b) { return a.date.localeCompare(b.date); });
+        saveDatabase();
+
+        addAuditLog('휴무일 추가', '새 휴무일 등록: ' + date + ' (' + name + ')');
+        showToast('새 휴무일이 등록되었습니다.', 'success');
+        document.getElementById('newHolidayName').value = '';
+        renderAdminHolidaysTab();
+      }
+
+      function handleDeleteHoliday(index) {
+        var h = state.holidays[index];
+        if (!h) return;
+        state.holidays.splice(index, 1);
+        saveDatabase();
+        addAuditLog('휴무일 삭제', '휴무일 삭제: ' + h.date + ' (' + h.name + ')');
+        showToast('휴무일이 삭제되었습니다.', 'success');
+        renderAdminHolidaysTab();
+      }
+
+      // EXPORT CSV (UTF-8 with BOM for flawless Korean in Excel)
+      function downloadCsvReport() {
+        var bom = '\uFEFF';
+        var csv = '직원ID,이름,권한,입사일,2026년발생연차(일),2026년발생연차(시간),사용연차(일),사용연차(시간),승인대기(시간),남은연차(일),남은연차(시간)\n';
+
+        state.users.forEach(function(u) {
+          if (u.status !== 'ACTIVE') return;
+          var bal = getEmployeeLeaveBalance(u.id, CURRENT_YEAR);
+          csv += [
+            u.username,
+            u.name,
+            (u.role === 'admin' ? '관리자' : (u.role === 'ceo' ? '대표' : '직원')),
+            u.hireDate,
+            bal.isUnlimited ? '무제한' : bal.accruedDays,
+            bal.isUnlimited ? '무제한' : bal.accruedHours,
+            bal.usedDays,
+            bal.usedHours,
+            bal.pendingHours,
+            bal.isUnlimited ? '무제한' : bal.remainingDays,
+            bal.isUnlimited ? '무제한' : bal.remainingHours
+          ].join(',') + '\n';
+        });
+
+        var blob = new Blob([bom + csv], { type: 'text/csv;charset=utf-8;' });
+        var link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.setAttribute('download', '우리회사_연차현황_' + CURRENT_YEAR + '.csv');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        addAuditLog('엑셀/CSV 다운로드', '2026년 전체 직원 연차 현황 CSV 다운로드');
+        showToast('연차 현황 CSV 파일이 다운로드되었습니다.', 'success');
+      }
+
+      // BACKUP JSON
+      function backupDatabaseJson() {
+        var data = {
+          users: state.users,
+          leaves: state.leaves,
+          holidays: state.holidays,
+          auditLogs: state.auditLogs,
+          manualAdjustments: state.manualAdjustments,
+          exportedAt: new Date().toISOString()
+        };
+        var jsonStr = JSON.stringify(data, null, 2);
+        var blob = new Blob([jsonStr], { type: 'application/json' });
+        var link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.setAttribute('download', 'annual_leave_system_backup_' + formatDateYMD(new Date()) + '.json');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast('전체 시스템 데이터가 JSON으로 백업되었습니다.', 'success');
+      }
+
+      // AUTH LOGIN / SIGNUP / INIT ADMIN
+      function showInitAdminCard() {
+        var initCard = document.getElementById('initAdminCard');
+        var loginCard = document.getElementById('loginCard');
+        var signupCard = document.getElementById('signupCard');
+        if (initCard) initCard.classList.remove('hidden');
+        if (loginCard) loginCard.classList.add('hidden');
+        if (signupCard) signupCard.classList.add('hidden');
+      }
+
+      function renderQuickLoginBox() {
+        var container = document.getElementById('quickLoginContainer');
+        var countEl = document.getElementById('quickLoginCount');
+        if (!container) return;
+
+        var activeUsers = state.users.filter(function(u) { return u.status === 'ACTIVE'; });
+        if (countEl) countEl.textContent = activeUsers.length + '명 등록됨';
+
+        if (activeUsers.length === 0) {
+          container.innerHTML = '<div class="text-center py-2 text-[11px] text-slate-400">등록된 계정이 없습니다. 회원가입 신청을 먼저 진행해 주세요.</div>';
+          return;
+        }
+
+        var html = '<div class="grid grid-cols-2 gap-1.5">';
+        activeUsers.forEach(function(u) {
+          html += '<button type="button" class="text-left p-1.5 bg-white border border-slate-200 rounded-lg text-[11px] hover:border-brand-500" onclick="window.quickSelectUser(\'' + u.id + '\')">' +
+            '<span class="font-bold text-slate-800 block truncate">' + u.name + (u.position ? (' ' + u.position) : '') + '</span>' +
+            '<span class="text-[10px] text-slate-400">' + (u.role === 'admin' ? '관리자·1차결재' : (u.role === 'ceo' ? '최종결재자' : '일반직원')) + '</span>' +
+          '</button>';
+        });
+        html += '</div>';
+        container.innerHTML = html;
+      }
+
+      window.quickSelectUser = function(userId) {
+        var u = state.users.find(function(user) { return user.id === userId; });
+        if (u) {
+          state.currentUser = u;
+          showToast(u.name + ' ' + u.position + ' 계정으로 로그인되었습니다.', 'success');
+          switchView('viewHome');
+        }
+      };
+
+      function showLoginCard() {
+        var initCard = document.getElementById('initAdminCard');
+        var loginCard = document.getElementById('loginCard');
+        var signupCard = document.getElementById('signupCard');
+        var noAdminNotice = document.getElementById('noAdminNotice');
+        var hasAdmin = state.users.some(function(u) { return u.role === 'admin' && u.status === 'ACTIVE'; });
+
+        if (initCard) initCard.classList.add('hidden');
+        if (loginCard) loginCard.classList.remove('hidden');
+        if (signupCard) signupCard.classList.add('hidden');
+        if (noAdminNotice) {
+          if (!hasAdmin) {
+            noAdminNotice.classList.remove('hidden');
+          } else {
+            noAdminNotice.classList.add('hidden');
+          }
+        }
+        renderQuickLoginBox();
+      }
+
+      function showSignupCard() {
+        var initCard = document.getElementById('initAdminCard');
+        var loginCard = document.getElementById('loginCard');
+        var signupCard = document.getElementById('signupCard');
+        if (initCard) initCard.classList.add('hidden');
+        if (loginCard) loginCard.classList.add('hidden');
+        if (signupCard) signupCard.classList.remove('hidden');
+      }
+
+      function handleInitAdminSubmit() {
+        var name = document.getElementById('initAdminName').value.trim();
+        var pos = '';
+        var hire = document.getElementById('initAdminHireDate').value.trim();
+        var username = document.getElementById('initAdminUsername').value.trim();
+        var pw = document.getElementById('initAdminPassword').value;
+        var pwConfirm = document.getElementById('initAdminPasswordConfirm').value;
+        var err = document.getElementById('initAdminErrorMsg');
+
+        if (!name || !username || !pw) {
+          err.textContent = '모든 항목을 입력해 주세요.';
+          err.classList.remove('hidden');
+          return;
+        }
+        if (pw.length < 4) {
+          err.textContent = '비밀번호는 최소 4자 이상 입력해 주세요.';
+          err.classList.remove('hidden');
+          return;
+        }
+        if (pw !== pwConfirm) {
+          err.textContent = '비밀번호와 비밀번호 확인이 일치하지 않습니다.';
+          err.classList.remove('hidden');
+          return;
+        }
+        if (state.users.some(function(u) { return u.username === username; })) {
+          err.textContent = '이미 사용 중인 사내 아이디입니다.';
+          err.classList.remove('hidden');
+          return;
+        }
+
+        err.classList.add('hidden');
+
+        var newAdmin = {
+          id: 'user_kim_custom_' + Date.now(),
+          username: username,
+          passwordHash: 'hash_' + pw,
+          name: name,
+          position: pos,
+          role: 'admin',
+          hireDate: hire,
+          status: 'ACTIVE',
+          createdAt: formatDateFull(new Date())
+        };
+
+        state.users.unshift(newAdmin);
+        state.currentUser = newAdmin;
+        saveDatabase();
+
+        addAuditLog('최초 관리자 직접 등록', name + ' (' + username + ') 관리자 계정 생성 완료');
+        showToast(name + ' 관리자 계정이 생성되었습니다. 환영합니다!', 'success');
+        switchView('viewHome');
+      }
+
+      function handleLoginSubmit() {
+        var uInput = document.getElementById('loginUsername').value.trim();
+        var pInput = document.getElementById('loginPassword').value.trim();
+        var err = document.getElementById('loginErrorMsg');
+
+        var user = state.users.find(function(u) { return u.username === uInput || u.name === uInput; });
+        if (!user) {
+          err.textContent = '등록되지 않은 아이디입니다.';
+          err.classList.remove('hidden');
+          return;
+        }
+
+        if (user.status === 'PENDING_APPROVAL') {
+          err.textContent = '현재 관리자(김남흥 차장) 승인 대기 중인 계정입니다. 승인 후 로그인할 수 있습니다.';
+          err.classList.remove('hidden');
+          return;
+        }
+
+        // Demo password check
+        if (pInput.length < 4) {
+          err.textContent = '비밀번호를 입력해 주세요.';
+          err.classList.remove('hidden');
+          return;
+        }
+
+        err.classList.add('hidden');
+        state.currentUser = user;
+        showToast(user.name + ' ' + user.position + '님, 환영합니다!', 'success');
+        switchView('viewHome');
+      }
+
+      function handleSignupSubmit() {
+        var name = document.getElementById('signupName').value.trim();
+        var username = document.getElementById('signupUsername').value.trim();
+        var pw = document.getElementById('signupPassword').value;
+        var pwConfirm = document.getElementById('signupPasswordConfirm').value;
+        var err = document.getElementById('signupErrorMsg');
+
+        if (!name || !username || !pw) {
+          err.textContent = '모든 항목을 입력해 주세요.';
+          err.classList.remove('hidden');
+          return;
+        }
+        if (pw !== pwConfirm) {
+          err.textContent = '비밀번호와 비밀번호 확인이 일치하지 않습니다.';
+          err.classList.remove('hidden');
+          return;
+        }
+        if (state.users.some(function(u) { return u.username === username; })) {
+          err.textContent = '이미 사용 중인 사내 아이디입니다.';
+          err.classList.remove('hidden');
+          return;
+        }
+
+        err.classList.add('hidden');
+
+        var newUser = {
+          id: 'user_' + Date.now(),
+          username: username,
+          passwordHash: 'hash_' + pw,
+          name: name,
+          position: '사원',
+          role: 'staff',
+          hireDate: formatDateYMD(new Date()),
+          status: 'PENDING_APPROVAL',
+          createdAt: formatDateFull(new Date())
+        };
+
+        state.users.push(newUser);
+        saveDatabase();
+
+        addAuditLog('신규 회원가입 신청', name + ' (' + username + ') 회원가입 신청 접수 -> 관리자 승인 대기');
+
+        showActionModal({
+          title: '가입 신청 완료',
+          desc: name + '님의 회원가입 신청이 접수되었습니다. 관리자(김남흥 차장)가 신원을 확인한 후 계정을 승인 및 활성화합니다.',
+          confirmText: '확인',
+          onConfirm: function() {
+            showLoginCard();
+          }
+        });
+      }
+
+      // -------------------------------------------------------------
+      // 10. INITIALIZATION
+      // -------------------------------------------------------------
+      function init() {
+        loadDatabase();
+        setupEventListeners();
+        var hasAdmin = state.users.some(function(u) { return u.role === 'admin' && u.status === 'ACTIVE'; });
+        if (!hasAdmin) {
+          switchView('viewAuth');
+          showInitAdminCard();
+        } else {
+          switchView('viewHome');
+        }
+      }
+
+      // Run on DOM ready
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
+
+    })();
+  </script>
+</body>
+</html>
