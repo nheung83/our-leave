@@ -953,6 +953,59 @@
       </div>
     </nav>
 
+    <!-- Dedicated Hire Date Edit Modal -->
+    <div id="hireDateModal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+      <div class="w-full max-w-[360px] bg-white rounded-2xl p-5 shadow-2xl animate-in fade-in zoom-in-95 duration-150 space-y-3">
+        <div class="flex justify-between items-center pb-2 border-b border-slate-100">
+          <h3 class="text-base font-bold text-slate-800" id="hireModalTargetName">직원 입사일 설정</h3>
+          <button id="closeHireModalBtn" type="button" class="text-slate-400 hover:text-slate-600 p-1">✕</button>
+        </div>
+
+        <p class="text-xs text-slate-500">
+          입사일을 설정하면 2026년 기준 연차 발생량이 자동으로 재계산됩니다.
+        </p>
+
+        <div>
+          <label for="hireModalDateInput" class="block text-xs font-bold text-slate-700 mb-1">입사일 선택 (달력)</label>
+          <input type="date" id="hireModalDateInput" class="w-full bg-slate-50 border-2 border-brand-500 rounded-xl px-3 py-2.5 text-base font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500">
+        </div>
+
+        <!-- Quick Presets -->
+        <div>
+          <span class="text-[10px] text-slate-500 font-semibold block mb-1">빠른 선택:</span>
+          <div class="grid grid-cols-2 gap-1.5 text-xs">
+            <button type="button" class="preset-hire-btn py-1.5 px-2 rounded-lg bg-slate-100 hover:bg-brand-50 hover:text-brand-700 font-medium text-left" data-date="2023-07-01">
+              2023.07.01 (16일)
+            </button>
+            <button type="button" class="preset-hire-btn py-1.5 px-2 rounded-lg bg-slate-100 hover:bg-brand-50 hover:text-brand-700 font-medium text-left" data-date="2024-01-01">
+              2024.01.01 (15일)
+            </button>
+            <button type="button" class="preset-hire-btn py-1.5 px-2 rounded-lg bg-slate-100 hover:bg-brand-50 hover:text-brand-700 font-medium text-left" data-date="2025-01-01">
+              2025.01.01 (15일)
+            </button>
+            <button type="button" class="preset-hire-btn py-1.5 px-2 rounded-lg bg-slate-100 hover:bg-brand-50 hover:text-brand-700 font-medium text-left" data-date="2026-01-01">
+              2026.01.01 (15일)
+            </button>
+          </div>
+        </div>
+
+        <!-- Expected Leave Preview -->
+        <div class="p-3 bg-brand-50 border border-brand-200 rounded-xl flex justify-between items-center text-xs">
+          <span class="text-brand-800 font-medium">2026년 발생 연차:</span>
+          <span id="hireModalExpectedLeave" class="text-sm font-extrabold text-brand-700">16일 (128시간)</span>
+        </div>
+
+        <div class="flex items-center space-x-2 pt-2">
+          <button id="cancelHireModalBtn" type="button" class="flex-1 py-2.5 rounded-xl border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition">
+            취소
+          </button>
+          <button id="saveHireModalBtn" type="button" class="flex-1 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 active:scale-98 text-xs font-bold text-white transition shadow-sm">
+            입사일 저장 및 적용
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Global In-Page Action Modal (For Approval, Rejection Reason, Confirmation) -->
     <div id="actionModal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
       <div class="w-full max-w-[360px] bg-white rounded-2xl p-5 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
@@ -1383,7 +1436,7 @@
 
       function parseFlexibleDate(str) {
         if (!str) return null;
-        str = str.trim().replace(/\s+/g, '');
+        str = str.trim().replace(/\s+/g, '').replace(/\.$/, '');
         // 1. YYYY-MM-DD or YYYY.MM.DD or YYYY/MM/DD or YYYY년MM월DD일
         var m1 = str.match(/^(\d{4})[-/.년](\d{1,2})[-/.월]?(\d{1,2})[일]?$/);
         if (m1) {
@@ -2629,6 +2682,61 @@
           });
         });
 
+
+        // Dedicated Hire Date Modal Listeners
+        var closeHireBtn = document.getElementById('closeHireModalBtn');
+        var cancelHireBtn = document.getElementById('cancelHireModalBtn');
+        var saveHireBtn = document.getElementById('saveHireModalBtn');
+        var hireDateInput = document.getElementById('hireModalDateInput');
+
+        if (closeHireBtn) closeHireBtn.addEventListener('click', closeHireDateModal);
+        if (cancelHireBtn) cancelHireBtn.addEventListener('click', closeHireDateModal);
+
+        if (hireDateInput) {
+          hireDateInput.addEventListener('change', updateHireModalPreview);
+          hireDateInput.addEventListener('input', updateHireModalPreview);
+        }
+
+        document.querySelectorAll('.preset-hire-btn').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var d = btn.getAttribute('data-date');
+            if (d && hireDateInput) {
+              hireDateInput.value = d;
+              updateHireModalPreview();
+            }
+          });
+        });
+
+        if (saveHireBtn) {
+          saveHireBtn.addEventListener('click', function() {
+            if (!currentEditingHireUserId) return;
+            var user = state.users.find(function(u) { return u.id === currentEditingHireUserId; });
+            if (!user) return;
+
+            var val = document.getElementById('hireModalDateInput').value;
+            var parsed = parseFlexibleDate(val);
+            if (!parsed) {
+              showToast('올바른 날짜를 선택 또는 입력해 주세요. (예: 2023-07-01)', 'error');
+              return;
+            }
+
+            var prevHire = user.hireDate;
+            user.hireDate = parsed;
+            saveDatabase();
+
+            var newBal = calculateBaseAnnualLeave(parsed, CURRENT_YEAR);
+            addAuditLog(
+              '직원 입사일 변경',
+              user.name + ' 입사일 변경: ' + prevHire + ' -> ' + parsed + ' (2026년 연차 ' + newBal.days + '일 자동 적용)'
+            );
+            showToast(user.name + ' 입사일이 ' + parsed + '로 저장되었습니다. (2026년 연차: ' + newBal.days + '일)', 'success');
+
+            closeHireDateModal();
+            renderAdminStaffTab();
+            renderHome();
+          });
+        }
+
         // Admin Staff List Actions (Edit Hire Date, Reset PW)
         var adminStaffList = document.getElementById('adminStaffList');
         if (adminStaffList) {
@@ -3194,39 +3302,41 @@
         });
       }
 
-      // ADMIN EDIT USER HIRE DATE / DETAILS (Mobile Datepicker + Flexible Parser)
+      // DEDICATED HIRE DATE MODAL CONTROLLER
+      var currentEditingHireUserId = null;
+
       function handleEditUserHireDate(userId) {
         var user = state.users.find(function(u) { return u.id === userId; });
         if (!user) return;
+        currentEditingHireUserId = userId;
 
-        showActionModal({
-          title: user.name + ' 입사일 설정',
-          desc: '입사일을 지정하면 2026년 기준 연차 발생량이 자동 산출됩니다. (현재 입사일: ' + (user.hireDate || '미설정') + ')',
-          needInput: true,
-          inputType: 'date',
-          defaultValue: user.hireDate || '2023-07-01',
-          inputLabel: '입사일 선택',
-          confirmText: '입사일 적용',
-          onConfirm: function(val) {
-            var parsed = parseFlexibleDate(val);
-            if (!parsed) {
-              showToast('올바른 날짜를 선택 또는 입력해 주세요. (예: 2023-07-01)', 'error');
-              return;
-            }
-            var prevHire = user.hireDate;
-            user.hireDate = parsed;
-            saveDatabase();
+        var modal = document.getElementById('hireDateModal');
+        var nameEl = document.getElementById('hireModalTargetName');
+        var dateInput = document.getElementById('hireModalDateInput');
 
-            var newBal = calculateBaseAnnualLeave(parsed, CURRENT_YEAR);
-            addAuditLog(
-              '직원 입사일 변경',
-              user.name + ' 입사일 변경: ' + prevHire + ' -> ' + parsed + ' (2026년 연차 ' + newBal.days + '일 자동 적용)'
-            );
-            showToast(user.name + ' 입사일이 ' + parsed + '로 저장되었습니다. (2026년 연차: ' + newBal.days + '일)', 'success');
-            renderAdminStaffTab();
-            renderHome();
-          }
-        });
+        nameEl.textContent = user.name + ' 입사일 설정';
+        dateInput.value = user.hireDate || '2023-07-01';
+
+        updateHireModalPreview();
+        modal.classList.remove('hidden');
+      }
+
+      function updateHireModalPreview() {
+        var dateInput = document.getElementById('hireModalDateInput');
+        var previewEl = document.getElementById('hireModalExpectedLeave');
+        var dateVal = dateInput.value;
+        if (!dateVal) {
+          previewEl.textContent = '-';
+          return;
+        }
+        var bal = calculateBaseAnnualLeave(dateVal, CURRENT_YEAR);
+        previewEl.textContent = bal.days + '일 (' + bal.hours + '시간)';
+      }
+
+      function closeHireDateModal() {
+        var modal = document.getElementById('hireDateModal');
+        modal.classList.add('hidden');
+        currentEditingHireUserId = null;
       }
 
       // ADMIN DEACTIVATE / DELETE USER
