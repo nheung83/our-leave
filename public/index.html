@@ -207,6 +207,21 @@
 
         <!-- Pending Approvals Widget for Manager (시스템 관리자 1차 결재 & 가입 승인) -->
         <div id="adminApprovalSection" class="hidden space-y-3">
+          <!-- 연차 취소 승인 대기 카드 (직원 취소 요청) -->
+          <div class="bg-white rounded-2xl p-4 border border-rose-100 shadow-xs">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-rose-500 pulse-badge"></span>
+                <h3 class="text-sm font-bold text-slate-800">연차 취소 승인 대기</h3>
+                <span id="badgeCancelPendingCount" class="text-xs font-bold px-2 py-0.5 bg-rose-100 text-rose-700 rounded-full">0건</span>
+              </div>
+              <span class="text-[11px] text-slate-400">승인 시 연차 잔여량 복원</span>
+            </div>
+            <div id="listCancelPendingApprovals" class="space-y-2">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
           <!-- 1차 결재 대기 알림 카드 -->
           <div class="bg-white rounded-2xl p-4 border border-blue-100 shadow-xs">
             <div class="flex items-center justify-between mb-3">
@@ -239,6 +254,21 @@
 
         <!-- Pending Approvals Widget for CEO (대표님 최종 결재) -->
         <div id="ceoApprovalSection" class="hidden space-y-3">
+          <!-- 연차 취소 승인 대기 카드 (대표용) -->
+          <div class="bg-white rounded-2xl p-4 border border-rose-100 shadow-xs">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center space-x-2">
+                <span class="w-2.5 h-2.5 rounded-full bg-rose-500 pulse-badge"></span>
+                <h3 class="text-sm font-bold text-slate-800">연차 취소 승인 대기</h3>
+                <span id="badgeCeoCancelPendingCount" class="text-xs font-bold px-2 py-0.5 bg-rose-100 text-rose-700 rounded-full">0건</span>
+              </div>
+              <span class="text-[11px] text-slate-400">승인 시 연차 잔여량 복원</span>
+            </div>
+            <div id="listCeoCancelPendingApprovals" class="space-y-2">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
           <div class="bg-white rounded-2xl p-4 border border-purple-100 shadow-xs">
             <div class="flex items-center justify-between mb-3">
               <div class="flex items-center space-x-2">
@@ -1547,7 +1577,7 @@
           if (user.role === 'admin') {
             adminNavBtn.classList.remove('hidden');
             // Check if there are pending signups or 1st approvals
-            var pending1st = state.leaves.filter(function(l) { return l.status === 'WAITING_FIRST'; }).length;
+            var pending1st = state.leaves.filter(function(l) { return l.status === 'WAITING_FIRST' || l.status === 'CANCEL_REQUESTED'; }).length;
             var pendingSignup = state.users.filter(function(u) { return u.status === 'PENDING_APPROVAL'; }).length;
             if (adminNavBadgeDot) {
               if (pending1st > 0 || pendingSignup > 0) {
@@ -1651,6 +1681,37 @@
 
         if (badgeCount) badgeCount.textContent = pending1st.length + '건';
 
+        // Render Cancel Approval Queue for Admin
+        var listCancel = document.getElementById('listCancelPendingApprovals');
+        var badgeCancel = document.getElementById('badgeCancelPendingCount');
+        var pendingCancel = state.leaves.filter(function(l) { return l.status === 'CANCEL_REQUESTED'; });
+
+        if (badgeCancel) badgeCancel.textContent = pendingCancel.length + '건';
+        if (listCancel) {
+          if (pendingCancel.length === 0) {
+            listCancel.innerHTML = '<div class="text-xs text-slate-400 py-2 text-center bg-slate-50 rounded-xl">취소 요청된 연차가 없습니다.</div>';
+          } else {
+            var cHtml = '';
+            pendingCancel.forEach(function(l) {
+              cHtml += '<div class="p-3 bg-rose-50/50 border border-rose-200 rounded-xl flex flex-col space-y-2">' +
+                '<div class="flex justify-between items-start">' +
+                  '<div>' +
+                    '<span class="text-xs font-bold text-slate-800">' + l.userName + ' ' + (l.userPosition || '') + '</span>' +
+                    '<span class="ml-1.5 text-[11px] text-rose-600 font-semibold">' + (l.applyType === 'SLOT' ? l.slotTimes : (l.startDate + '~' + l.endDate)) + '</span>' +
+                    '<span class="block text-[11px] text-slate-600 mt-0.5">' + formatDaysAndHours(l.hours) + ' 취소 요청' + (l.cancelReason ? (' (사유: ' + l.cancelReason + ')') : '') + '</span>' +
+                  '</div>' +
+                  '<span class="px-2 py-0.5 text-[10px] font-bold rounded-md bg-rose-100 text-rose-700">취소요청</span>' +
+                '</div>' +
+                '<div class="flex space-x-1.5 pt-1 border-t border-rose-200">' +
+                  '<button type="button" class="btn-approve-cancel flex-1 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg transition" data-id="' + l.id + '">취소 승인 (연차 복원)</button>' +
+                  '<button type="button" class="btn-reject-cancel flex-1 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-lg transition" data-id="' + l.id + '">취소 반려</button>' +
+                '</div>' +
+              '</div>';
+            });
+            listCancel.innerHTML = cHtml;
+          }
+        }
+
         if (!list1stPending) return;
         if (pending1st.length === 0) {
           list1stPending.innerHTML = '<div class="text-xs text-slate-400 py-3 text-center bg-slate-50 rounded-xl">대기 중인 1차 결재가 없습니다.</div>';
@@ -1708,6 +1769,36 @@
         var pendingCeo = state.leaves.filter(function(l) { return l.status === 'WAITING_FINAL'; });
 
         if (badgeCount) badgeCount.textContent = pendingCeo.length + '건';
+
+        var listCeoCancel = document.getElementById('listCeoCancelPendingApprovals');
+        var badgeCeoCancel = document.getElementById('badgeCeoCancelPendingCount');
+        var pendingCancelCeo = state.leaves.filter(function(l) { return l.status === 'CANCEL_REQUESTED'; });
+
+        if (badgeCeoCancel) badgeCeoCancel.textContent = pendingCancelCeo.length + '건';
+        if (listCeoCancel) {
+          if (pendingCancelCeo.length === 0) {
+            listCeoCancel.innerHTML = '<div class="text-xs text-slate-400 py-2 text-center bg-slate-50 rounded-xl">취소 요청된 연차가 없습니다.</div>';
+          } else {
+            var ccHtml = '';
+            pendingCancelCeo.forEach(function(l) {
+              ccHtml += '<div class="p-3 bg-rose-50/50 border border-rose-200 rounded-xl flex flex-col space-y-2">' +
+                '<div class="flex justify-between items-start">' +
+                  '<div>' +
+                    '<span class="text-xs font-bold text-slate-800">' + l.userName + ' ' + (l.userPosition || '') + '</span>' +
+                    '<span class="ml-1.5 text-[11px] text-rose-600 font-semibold">' + (l.applyType === 'SLOT' ? l.slotTimes : (l.startDate + '~' + l.endDate)) + '</span>' +
+                    '<span class="block text-[11px] text-slate-600 mt-0.5">' + formatDaysAndHours(l.hours) + ' 취소 요청' + (l.cancelReason ? (' (사유: ' + l.cancelReason + ')') : '') + '</span>' +
+                  '</div>' +
+                  '<span class="px-2 py-0.5 text-[10px] font-bold rounded-md bg-rose-100 text-rose-700">취소요청</span>' +
+                '</div>' +
+                '<div class="flex space-x-1.5 pt-1 border-t border-rose-200">' +
+                  '<button type="button" class="btn-approve-cancel flex-1 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-lg transition" data-id="' + l.id + '">취소 승인 (연차 복원)</button>' +
+                  '<button type="button" class="btn-reject-cancel flex-1 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold rounded-lg transition" data-id="' + l.id + '">취소 반려</button>' +
+                '</div>' +
+              '</div>';
+            });
+            listCeoCancel.innerHTML = ccHtml;
+          }
+        }
 
         if (!listCeoPending) return;
         if (pendingCeo.length === 0) {
@@ -2628,6 +2719,28 @@
           });
         }
 
+
+        // Event delegation for cancel approval buttons in admin and CEO home
+        var adminSec = document.getElementById('adminApprovalSection');
+        if (adminSec) {
+          adminSec.addEventListener('click', function(e) {
+            var appBtn = e.target.closest('.btn-approve-cancel');
+            var rejBtn = e.target.closest('.btn-reject-cancel');
+            if (appBtn) handleCancelApproval(appBtn.getAttribute('data-id'), true);
+            else if (rejBtn) handleCancelApproval(rejBtn.getAttribute('data-id'), false);
+          });
+        }
+
+        var ceoSec = document.getElementById('ceoApprovalSection');
+        if (ceoSec) {
+          ceoSec.addEventListener('click', function(e) {
+            var appBtn = e.target.closest('.btn-approve-cancel');
+            var rejBtn = e.target.closest('.btn-reject-cancel');
+            if (appBtn) handleCancelApproval(appBtn.getAttribute('data-id'), true);
+            else if (rejBtn) handleCancelApproval(rejBtn.getAttribute('data-id'), false);
+          });
+        }
+
         // Approvals (1st Approval by Kim Namheung)
         var pending1stContainer = document.getElementById('list1stPendingApprovals');
         if (pending1stContainer) {
@@ -3195,25 +3308,70 @@
         }
       }
 
+
+      function handleCancelApproval(leaveId, isApprove) {
+        var leave = state.leaves.find(function(l) { return l.id === leaveId; });
+        if (!leave) return;
+
+        var operatorName = state.currentUser ? (state.currentUser.name + ' ' + (state.currentUser.position || '')) : '관리자';
+
+        if (isApprove) {
+          showActionModal({
+            title: '연차 취소 승인',
+            desc: leave.userName + '님의 연차 취소를 승인하시겠습니까? 승인 즉시 ' + formatDaysAndHours(leave.hours) + '가 본인 연차 잔여량으로 자동 복원되며 공유 달력에서 일정이 제거됩니다.',
+            confirmText: '취소 승인 (연차 복원)',
+            onConfirm: function() {
+              leave.status = 'CANCELLED';
+              leave.cancelledAt = formatDateFull(new Date());
+              leave.cancelledBy = operatorName;
+              saveDatabase();
+              addAuditLog('연차 취소 승인 완료', leave.userName + ' 연차 취소 승인 (' + formatDaysAndHours(leave.hours) + ' 복원 완료)');
+              showToast(leave.userName + '님의 연차 취소가 승인되어 ' + formatDaysAndHours(leave.hours) + '가 정상 복원되었습니다.', 'success');
+              renderHome();
+              renderCalendar();
+            }
+          });
+        } else {
+          showActionModal({
+            title: '연차 취소 요청 반려',
+            desc: leave.userName + '님의 취소 요청을 반려하고 기존 승인 연차 일정을 유지하시겠습니까?',
+            needInput: true,
+            inputLabel: '반려 사유',
+            inputPlaceholder: '취소 반려 사유 입력',
+            confirmText: '취소 반려',
+            onConfirm: function(reason) {
+              leave.status = 'APPROVED'; // revert to approved
+              saveDatabase();
+              addAuditLog('연차 취소 요청 반려', leave.userName + ' 연차 취소 반려 (기존 연차 유지, 사유: ' + (reason || '-') + ')');
+              showToast('연차 취소 요청이 반려되었습니다. (기존 연차 유지)', 'error');
+              renderHome();
+            }
+          });
+        }
+      }
+
       // CANCEL REQUEST & APPROVAL WORKFLOW
       function handleLeaveCancelRequest(leaveId) {
         var leave = state.leaves.find(function(l) { return l.id === leaveId; });
         if (!leave) return;
 
         showActionModal({
-          title: '연차 취소 신청',
-          desc: '이미 최종 승인된 연차를 취소하시겠습니까? 관리자 또는 결재자의 승인 후 잔여 연차가 복원됩니다.',
+          title: '연차 사용 취소',
+          desc: '승인된 연차(' + formatDaysAndHours(leave.hours) + ')를 취소하시겠습니까?\n취소 즉시 연차 잔여량이 자동으로 복원되며 공유 달력에서 일정이 제거됩니다.',
           needInput: true,
-          inputLabel: '취소 사유',
-          inputPlaceholder: '예: 일정 변경으로 인한 연차 취소 요청',
-          confirmText: '취소 신청',
+          inputLabel: '취소 사유 (선택)',
+          inputPlaceholder: '예: 개인 일정 변경으로 취소',
+          confirmText: '연차 취소 및 복원',
           onConfirm: function(reason) {
-            leave.status = 'CANCEL_REQUESTED';
-            leave.cancelReason = reason || '직원 직접 취소 요청';
+            leave.status = 'CANCELLED';
+            leave.cancelReason = reason || '직원 직접 취소';
+            leave.cancelledAt = formatDateFull(new Date());
             saveDatabase();
-            addAuditLog('연차 취소 신청', leave.userName + ' 연차 취소 신청 (' + formatDaysAndHours(leave.hours) + ')');
-            showToast('연차 취소 신청이 접수되었습니다.', 'success');
+            addAuditLog('연차 취소 완료', leave.userName + ' 연차 사용 취소 (' + formatDaysAndHours(leave.hours) + ' 잔여 연차 즉시 복원 완료)');
+            showToast('연차가 취소되어 ' + formatDaysAndHours(leave.hours) + '가 정상 복원되었습니다.', 'success');
             renderHistory();
+            renderHome();
+            renderCalendar();
           }
         });
       }
