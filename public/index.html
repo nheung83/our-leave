@@ -129,8 +129,8 @@
       <div class="w-full max-w-[430px] bg-white rounded-t-2xl sm:rounded-2xl p-5 shadow-2xl animate-in slide-in-from-bottom duration-200">
         <div class="flex justify-between items-center mb-4 pb-2 border-b border-slate-100">
           <div>
-            <h3 class="text-base font-bold text-slate-800">계정 전환 / 테스트 모드</h3>
-            <p class="text-xs text-slate-500">직원 4명의 권한을 즉시 전환하여 테스트합니다.</p>
+            <h3 class="text-base font-bold text-slate-800">내 계정 정보</h3>
+            <p class="text-xs text-slate-500">현재 로그인된 사내 계정입니다.</p>
           </div>
           <button id="closeUserModalBtn" class="p-1 rounded-full text-slate-400 hover:text-slate-600 bg-slate-100">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -141,12 +141,10 @@
           <!-- User items populated dynamically -->
         </div>
 
-        <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
-          <button id="navToLoginBtn" class="text-xs font-medium text-brand-600 hover:text-brand-800 underline">
-            로그아웃 및 로그인 화면으로 이동
-          </button>
-          <button id="navToSignupBtn" class="text-xs font-medium text-slate-600 hover:text-slate-900 bg-slate-100 px-3 py-1.5 rounded-lg">
-            새 직원 가입 테스트
+        <div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+          <span class="text-xs text-slate-400">사내 보안 세션 연결 중</span>
+          <button id="navToLoginBtn" class="bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold px-4 py-2 rounded-xl text-xs transition">
+            로그아웃
           </button>
         </div>
       </div>
@@ -633,7 +631,7 @@
           <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs">
             <div class="flex justify-between items-center mb-3">
               <h3 class="text-sm font-bold text-slate-800">등록 직원 목록 및 정보 관리</h3>
-              <span class="text-xs text-brand-600 font-semibold" id="adminTotalUserCount">4명</span>
+              <span class="text-xs text-brand-600 font-semibold" id="adminTotalUserCount">0명</span>
             </div>
             <p class="text-xs text-slate-500 mb-3">직원의 입사일을 수정하면 해당 연도의 회사 기준 발생 연차가 즉시 자동 재계산됩니다.</p>
             
@@ -862,16 +860,7 @@
             </button>
           </div>
 
-          <!-- Quick Registered Users Box (Dynamic) -->
-          <div class="mt-4 p-3 bg-slate-50 rounded-xl border border-slate-200">
-            <div class="flex justify-between items-center mb-1.5">
-              <span class="text-[11px] font-bold text-slate-600">등록된 사내 계정:</span>
-              <span id="quickLoginCount" class="text-[10px] text-brand-600 font-bold">0명</span>
-            </div>
-            <div id="quickLoginContainer" class="space-y-1 text-xs">
-              <!-- Dynamically populated -->
-            </div>
-          </div>
+
         </div>
 
         <!-- Signup Card -->
@@ -2161,6 +2150,10 @@
       function renderAdminStaffTab() {
         var staffList = document.getElementById('adminStaffList');
         var targetSelect = document.getElementById('adjustTargetUser');
+        var countEl = document.getElementById('adminTotalUserCount');
+        if (countEl) {
+          countEl.textContent = state.users.filter(function(u) { return u.status === 'ACTIVE'; }).length + '명';
+        }
         if (!staffList) return;
 
         var html = '';
@@ -2404,14 +2397,7 @@
             showLoginCard();
           });
         }
-        var navToSignupBtn = document.getElementById('navToSignupBtn');
-        if (navToSignupBtn) {
-          navToSignupBtn.addEventListener('click', function() {
-            quickUserModal.classList.add('hidden');
-            switchView('viewAuth');
-            showSignupCard();
-          });
-        }
+
 
         // Modal Confirm & Cancel
         var modalConfirmBtn = document.getElementById('modalConfirmBtn');
@@ -2835,43 +2821,37 @@
         var container = document.getElementById('userSwitchList');
         if (!container) return;
 
-        var html = '';
-        var hasAdmin = state.users.some(function(u) { return u.role === 'admin' && u.status === 'ACTIVE'; });
-        if (!hasAdmin) {
-          html += '<div class="p-3 bg-amber-50 border border-amber-300 rounded-xl mb-2 flex items-center justify-between">' +
-            '<div>' +
-              '<span class="text-xs font-bold text-amber-900 block">관리자 계정 미등록</span>' +
-              '<span class="text-[11px] text-amber-700">시스템 관리자로 직접 가입하세요.</span>' +
-            '</div>' +
-            '<button type="button" class="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-lg" onclick="window.goToAdminSignup()">' +
-              '가입하기' +
-            '</button>' +
-          '</div>';
+        if (!state.currentUser) {
+          container.innerHTML = '<div class="text-xs text-slate-400 py-3 text-center">로그인된 사용자가 없습니다.</div>';
+          return;
         }
 
-        state.users.forEach(function(u) {
-          if (u.status !== 'ACTIVE') return;
-          var isCurrent = state.currentUser && state.currentUser.id === u.id;
-          var bal = getEmployeeLeaveBalance(u.id, CURRENT_YEAR);
+        var u = state.currentUser;
+        var bal = getEmployeeLeaveBalance(u.id, CURRENT_YEAR);
+        var roleBadge = u.role === 'admin' ? '<span class="text-[10px] bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded">시스템 관리자</span>' :
+                        (u.role === 'ceo' ? '<span class="text-[10px] bg-purple-100 text-purple-800 font-bold px-2 py-0.5 rounded">최종 결재자 (대표)</span>' :
+                        '<span class="text-[10px] bg-slate-200 text-slate-700 font-bold px-2 py-0.5 rounded">일반 직원</span>');
 
-          html += '<button type="button" class="w-full text-left p-2.5 rounded-xl border ' + (isCurrent ? 'border-brand-600 bg-brand-50' : 'border-slate-200 bg-white hover:bg-slate-50') + ' transition flex items-center justify-between" onclick="window.switchCurrentUser(\'' + u.id + '\')">' +
+        container.innerHTML = '<div class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-2">' +
+          '<div class="flex items-center justify-between">' +
             '<div class="flex items-center space-x-2.5">' +
-              '<div class="w-8 h-8 rounded-full ' + (isCurrent ? 'bg-brand-600 text-white' : 'bg-slate-200 text-slate-700') + ' flex items-center justify-center font-bold text-xs">' +
+              '<div class="w-10 h-10 rounded-full bg-brand-800 text-white flex items-center justify-center font-bold text-sm shadow-xs">' +
                 u.name.charAt(0) +
               '</div>' +
               '<div>' +
                 '<div class="flex items-center space-x-1.5">' +
-                  '<span class="text-xs font-bold text-slate-800">' + u.name + ' ' + u.position + '</span>' +
-                  '<span class="text-[10px] text-slate-500 font-medium">' + (u.role === 'admin' ? '관리자·1차결재' : (u.role === 'ceo' ? '최종결재자' : '일반직원')) + '</span>' +
+                  '<span class="text-sm font-bold text-slate-800">' + u.name + '</span>' +
+                  roleBadge +
                 '</div>' +
-                '<span class="text-[10px] text-slate-400">잔여: ' + (bal.isUnlimited ? '무제한' : (bal.remainingDays + '일 (' + bal.remainingHours + 'h)')) + '</span>' +
+                '<span class="text-xs text-slate-500">아이디: ' + u.username + ' · 입사일: ' + (u.hireDate || '미설정') + '</span>' +
               '</div>' +
             '</div>' +
-            (isCurrent ? '<span class="text-xs font-bold text-brand-600">선택됨</span>' : '') +
-          '</button>';
-        });
-
-        container.innerHTML = html;
+          '</div>' +
+          '<div class="pt-2 border-t border-slate-200 flex justify-between items-center text-xs text-slate-600">' +
+            '<span>2026년 잔여 연차:</span>' +
+            '<span class="font-extrabold text-brand-700">' + (bal.isUnlimited ? '무제한 (대표)' : (bal.remainingDays + '일 (' + bal.remainingHours + '시간)')) + '</span>' +
+          '</div>' +
+        '</div>';
       }
 
       window.goToAdminSignup = function() {
@@ -3478,41 +3458,7 @@
         if (signupCard) signupCard.classList.add('hidden');
       }
 
-      function renderQuickLoginBox() {
-        var container = document.getElementById('quickLoginContainer');
-        var countEl = document.getElementById('quickLoginCount');
-        if (!container) return;
-
-        var activeUsers = state.users.filter(function(u) { return u.status === 'ACTIVE'; });
-        if (countEl) countEl.textContent = activeUsers.length + '명 등록됨';
-
-        if (activeUsers.length === 0) {
-          container.innerHTML = '<div class="text-center py-2 text-[11px] text-slate-400">등록된 계정이 없습니다. 회원가입 신청을 먼저 진행해 주세요.</div>';
-          return;
-        }
-
-        var html = '<div class="grid grid-cols-2 gap-1.5">';
-        activeUsers.forEach(function(u) {
-          html += '<button type="button" class="text-left p-1.5 bg-white border border-slate-200 rounded-lg text-[11px] hover:border-brand-500" onclick="window.quickSelectUser(\'' + u.id + '\')">' +
-            '<span class="font-bold text-slate-800 block truncate">' + u.name + (u.position ? (' ' + u.position) : '') + '</span>' +
-            '<span class="text-[10px] text-slate-400">' + (u.role === 'admin' ? '관리자·1차결재' : (u.role === 'ceo' ? '최종결재자' : '일반직원')) + '</span>' +
-          '</button>';
-        });
-        html += '</div>';
-        container.innerHTML = html;
-      }
-
-      window.quickSelectUser = function(userId) {
-        var u = state.users.find(function(user) { return user.id === userId; });
-        if (u) {
-          state.currentUser = u;
-          try {
-            localStorage.setItem('ANNUAL_LEAVE_SESSION_USER_ID', u.id);
-          } catch (e) {}
-          showToast(u.name + ' 계정으로 로그인되었습니다.', 'success');
-          switchView('viewHome');
-        }
-      };
+      
 
       function showLoginCard() {
         var initCard = document.getElementById('initAdminCard');
@@ -3531,7 +3477,7 @@
             noAdminNotice.classList.add('hidden');
           }
         }
-        renderQuickLoginBox();
+        
       }
 
       function showSignupCard() {
